@@ -1,6 +1,6 @@
 // ============================================
 // SOLID CODE - CODEWORKSHOP
-// Generado: 9/1/2026, 4:31:21 p. m.
+// Generado: 9/1/2026, 5:35:25 p. m.
 // Total de archivos: 7
 // ============================================
 
@@ -11,14 +11,12 @@
 // URL: https://raw.githubusercontent.com/koki81pe/CodeWorkShop/refs/heads/main/code.gs
 // ============================================
 
-/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║ PROYECTO: CodeWorkShop                                   ║
- * ║ ARCHIVO: code.gs                                         ║
- * ║ VERSIÓN: 1.1.1                                           ║
- * ║ FECHA: 10/01/2026 03:00 (UTC-5)                          ║
- * ╚══════════════════════════════════════════════════════════╝
- */
+/******************************************
+PROYECTO: CodeWorkShop
+ARCHIVO: code.gs
+VERSIÓN: 01.06
+FECHA: 10/01/2026 (UTC-5)
+******************************************/
 
 // MOD-001: FORZAR PERMISOS [INICIO]
 /**
@@ -46,6 +44,15 @@ function forzarPermisos() {
     Logger.log('✅ ScriptApp disponible');
   } catch (e) {
     Logger.log('❌ Error con ScriptApp: ' + e);
+  }
+  
+  // Verificar acceso a Google Docs
+  try {
+    DocumentApp.openById('1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA');
+    Logger.log('✅ Permiso DocumentApp autorizado');
+  } catch (e) {
+    Logger.log('❌ Esperando autorización de DocumentApp: ' + e);
+    throw new Error('Autoriza DocumentApp y vuelve a ejecutar');
   }
   
   Logger.log('✅ Permisos verificados. Ahora puedes desplegar la webapp.');
@@ -114,7 +121,7 @@ function parsearModulos(codigoCompleto) {
 // MOD-005: EXTRAER HEADER [INICIO]
 function extraerHeader(codigoCompleto) {
   try {
-    const headerRegex = /\/\*\*[\s\S]*?PROYECTO:\s*(.+?)[\s\S]*?ARCHIVO:\s*(.+?)[\s\S]*?VERSIÓN:\s*(.+?)[\s\S]*?FECHA:\s*(.+?)\*\//;
+    const headerRegex = /\/\*{40}\s*PROYECTO:\s*(.+?)\s*ARCHIVO:\s*(.+?)\s*VERSIÓN:\s*(.+?)\s*FECHA:\s*(.+?)\s*\*{40}\//s;
     const match = codigoCompleto.match(headerRegex);
     
     if (!match) {
@@ -204,8 +211,8 @@ function reemplazarModulo(codigoCompleto, numeroModulo, nuevoCodigoModulo) {
 function actualizarVersion(codigo, headerActual) {
   try {
     const versionParts = headerActual.version.split('.');
-    if (versionParts.length === 3) {
-      versionParts[2] = String(parseInt(versionParts[2]) + 1);
+    if (versionParts.length === 2) {
+      versionParts[1] = String(parseInt(versionParts[1]) + 1).padStart(2, '0');
       const nuevaVersion = versionParts.join('.');
       
       const ahora = new Date();
@@ -214,22 +221,21 @@ function actualizarVersion(codigo, headerActual) {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
         hour12: false
       };
       
-      const fechaFormateada = ahora.toLocaleString('es-PE', opciones)
-        .replace(/(\d+)\/(\d+)\/(\d+),?\s*(\d+):(\d+)/, '$1/$2/$3 $4:$5');
+      const partes = ahora.toLocaleString('es-PE', opciones).split(/[\s,\/]+/);
+      const nuevaFecha = `${partes[0]}/${partes[1]}/${partes[2]} (UTC-5)`;
       
-      const nuevaFecha = fechaFormateada + ' (UTC-5)';
+      const headerRegex = /\/\*{40}[\s\S]*?\*{40}\//;
+      const nuevoHeader = `/******************************************
+PROYECTO: ${headerActual.proyecto}
+ARCHIVO: ${headerActual.archivo}
+VERSIÓN: ${nuevaVersion}
+FECHA: ${nuevaFecha}
+******************************************/`;
       
-      const headerRegex = /\/\*\*[\s\S]*?VERSIÓN:\s*(.+?)[\s\S]*?FECHA:\s*(.+?)\*\//;
-      const codigoActualizado = codigo.replace(headerRegex, function(match) {
-        return match
-          .replace(/VERSIÓN:\s*(.+?)[\s\S]/, `VERSIÓN: ${nuevaVersion}                                        ║\n`)
-          .replace(/FECHA:\s*(.+?)\*\//, `FECHA: ${nuevaFecha}                         ║\n * ╚══════════════════════════════════════════════════════════╝\n */`);
-      });
+      const codigoActualizado = codigo.replace(headerRegex, nuevoHeader);
       
       Logger.log('✅ Versión actualizada: ' + headerActual.version + ' → ' + nuevaVersion);
       return codigoActualizado;
@@ -261,6 +267,58 @@ function obtenerURLTests() {
 }
 // MOD-009: FIN
 
+// MOD-010: OBTENER ESTÁNDAR DESDE GOOGLE DOC [INICIO]
+function obtenerEstandar() {
+  try {
+    const docId = '1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA';
+    const doc = DocumentApp.openById(docId);
+    const texto = doc.getBody().getText();
+    
+    if (!texto || texto.trim() === '') {
+      return { success: false, error: 'El documento está vacío' };
+    }
+    
+    Logger.log('✅ Estándar obtenido desde Google Doc (' + texto.length + ' caracteres)');
+    return { success: true, texto: texto };
+    
+  } catch (error) {
+    Logger.log('❌ Error al obtener estándar: ' + error.message);
+    return { success: false, error: 'No se pudo leer el documento. Verifica los permisos.' };
+  }
+}
+// MOD-010: FIN
+
+// MOD-011: NOTAS [INICIO]
+/*
+DESCRIPCIÓN:
+Backend principal de CodeWorkShop para parseo, validación y reemplazo
+de módulos en código modular. Ahora integrado con Google Docs para el estándar.
+
+DEPENDENCIAS:
+- MOD-002: Requiere archivos HTML (index, style, scripts, testweb)
+- MOD-004: Usa regex para detectar formato MOD-XXX
+- MOD-007: Llama a MOD-004, MOD-005, MOD-006 y MOD-008
+- MOD-010: Requiere acceso a Google Docs API
+
+ADVERTENCIAS:
+- MOD-001: Debe ejecutarse manualmente antes del primer deploy
+- MOD-005: El formato de header es simple (sin marco decorativo)
+- MOD-008: Solo funciona con versiones formato XX.YY (dos secciones)
+- MOD-010: Requiere que el documento esté compartido correctamente
+
+CAMBIOS RECIENTES:
+- v01.06: Integración con Google Doc para el estándar
+- v01.06: Eliminado standard.html
+- v01.06: Agregado MOD-010 para leer Google Doc
+- v01.02: Nuevo formato de header simplificado
+
+PRÓXIMAS MEJORAS:
+- Implementar validación de tabulación en módulos
+- Agregar detección automática de módulo de NOTAS
+- Cache del estándar para reducir llamadas a Google Docs
+*/
+// MOD-011: FIN
+
 
 // ============================================
 // ARCHIVO 2/7: index.html
@@ -269,12 +327,12 @@ function obtenerURLTests() {
 
 <!DOCTYPE html>
 <!--
-╔══════════════════════════════════════════════════════════╗
-║  PROYECTO: CodeWorkShop                                  ║
-║  ARCHIVO:  index.html                                    ║
-║  VERSIÓN:  1.1.0                                         ║
-║  FECHA:    10/01/2026 02:00 (UTC-5)                      ║
-╚══════════════════════════════════════════════════════════╝
+/******************************************
+PROYECTO: CodeWorkShop
+ARCHIVO: index.html
+VERSIÓN: 01.06
+FECHA: 10/01/2026 (UTC-5)
+******************************************/
 -->
 <html lang="es">
 <head>
@@ -286,6 +344,7 @@ function obtenerURLTests() {
 <body>
   <!-- MOD-001: CONTAINER PRINCIPAL [INICIO] -->
   <div class="container">
+    
     <!-- MOD-002: HEADER [INICIO] -->
     <div class="main-header">
       <div class="header-content">
@@ -294,12 +353,12 @@ function obtenerURLTests() {
       </div>
       <div class="header-actions">
         <button class="btn-secondary" onclick="copiarInstruccionesIA()" 
-                title="Copia las instrucciones para entrenar IAs en el formato de modulación">
-          📋 Copiar Instrucciones para IA
+                title="Copia el estándar CodeWorkShop para entrenar IAs">
+          📋 Copiar Estándar
         </button>
-        <button class="btn-secondary" onclick="abrirTests()" 
+        <button class="btn-secondary" onclick="abrirTests()"
                 title="Ir a la página de tests">
-          🧪 Test
+          🧪 Tests
         </button>
       </div>
     </div>
@@ -362,12 +421,12 @@ function obtenerURLTests() {
     
     <!-- MOD-008: NOTIFICACIONES Y LOADING [INICIO] -->
     <div id="toast" class="toast"></div>
-    
     <div id="loading" class="loading-overlay">
       <div class="spinner"></div>
       <p>Procesando...</p>
     </div>
     <!-- MOD-008: FIN -->
+    
   </div>
   <!-- MOD-001: FIN -->
   
@@ -382,12 +441,12 @@ function obtenerURLTests() {
 // ============================================
 
 <!--
-╔══════════════════════════════════════════════════════════╗
-║  PROYECTO: CodeWorkShop                                  ║
-║  ARCHIVO:  scripts.html                                  ║
-║  VERSIÓN:  1.1.0                                         ║
-║  FECHA:    10/01/2026 02:15 (UTC-5)                      ║
-╚══════════════════════════════════════════════════════════╝
+/******************************************
+PROYECTO: CodeWorkShop
+ARCHIVO: scripts.html
+VERSIÓN: 01.06
+FECHA: 10/01/2026 (UTC-5)
+******************************************/
 -->
 <script>
 // Variables globales
@@ -395,195 +454,50 @@ let codigoOriginal = '';
 let modulosDetectados = [];
 let moduloSeleccionado = null;
 
-// Constante con instrucciones para IA
-const INSTRUCCIONES_IA = `# 🔧 INSTRUCCIONES DE MODULACIÓN DE CÓDIGO - CodeWorkShop
-
-Para que el código sea compatible con CodeWorkShop, sigue EXACTAMENTE estas reglas:
-
-## 📋 HEADER OBLIGATORIO
-
-Todo archivo de código DEBE iniciar con:
-
-\`\`\`
-/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║ PROYECTO: [Nombre del Proyecto]                         ║
- * ║ ARCHIVO: [NombreArchivo.gs]                             ║
- * ║ VERSIÓN: [X.Y.Z]                                        ║
- * ║ FECHA: [DD/MM/AAAA HH:MM (UTC-5)]                       ║
- * ╚══════════════════════════════════════════════════════════╝
- */
-\`\`\`
-
-**Ejemplo real:**
-\`\`\`
-/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║ PROYECTO: Sistema de Facturación                        ║
- * ║ ARCHIVO: facturacion.gs                                 ║
- * ║ VERSIÓN: 2.3.1                                          ║
- * ║ FECHA: 09/01/2026 14:30 (UTC-5)                         ║
- * ╚══════════════════════════════════════════════════════════╝
- */
-\`\`\`
-
----
-
-## 🧩 MODULACIÓN DE FUNCIONES
-
-Cada función o sección lógica DEBE estar delimitada así:
-
-\`\`\`
-// MOD-001: DESCRIPCIÓN EN MAYÚSCULAS [INICIO]
-function miFuncion() {
-  // código aquí
-}
-// MOD-001: FIN
-\`\`\`
-
-**Ejemplo completo:**
-\`\`\`
-// MOD-001: VALIDACIÓN DE DATOS [INICIO]
-function validarDatos(datos) {
-  if (!datos || datos.length === 0) {
-    throw new Error("Datos vacíos");
-  }
-  return true;
-}
-// MOD-001: FIN
-
-// MOD-002: PROCESAMIENTO PRINCIPAL [INICIO]
-function procesarFactura(factura) {
-  validarDatos(factura);
-  const resultado = calcularTotal(factura);
-  return resultado;
-}
-// MOD-002: FIN
-
-// MOD-003: CÁLCULO DE TOTALES [INICIO]
-function calcularTotal(factura) {
-  return factura.items.reduce((sum, item) => sum + item.precio, 0);
-}
-// MOD-003: FIN
-\`\`\`
-
----
-
-## ⚠️ REGLAS CRÍTICAS
-
-### 1. Numeración Secuencial
-- ✅ Usar: MOD-001, MOD-002, MOD-003...
-- ❌ NO saltar números: MOD-001, MOD-005, MOD-003
-- ❌ NO repetir números
-
-### 2. Etiquetas Obligatorias
-- **[INICIO]** es OBLIGATORIO (con corchetes)
-- **FIN** DEBE tener el MISMO número que INICIO
-- Ejemplo correcto:
-  \`\`\`
-  // MOD-007: FUNCIÓN [INICIO]
-  function test() {}
-  // MOD-007: FIN
-  \`\`\`
-
-### 3. Descripción
-- Siempre en MAYÚSCULAS
-- Clara y concisa
-- Describe la función del módulo
-
-### 4. NO usar MOD-XXX dentro del código
-- ❌ Incorrecto:
-  \`\`\`
-  // MOD-001: FUNCIÓN [INICIO]
-  function test() {
-    // Este es el MOD-001 que hace... ← NO HACER ESTO
-  }
-  // MOD-001: FIN
-  \`\`\`
-- ✅ Correcto:
-  \`\`\`
-  // MOD-001: FUNCIÓN [INICIO]
-  function test() {
-    // Esta función valida los datos de entrada
-  }
-  // MOD-001: FIN
-  \`\`\`
-
----
-
-## 🔄 CUANDO MODIFICAS CÓDIGO EXISTENTE
-
-**REGLA DE ORO:** Si el código YA tiene módulos, SOLO entrega el módulo modificado.
-
-### ❌ INCORRECTO - NO hagas esto:
-\`\`\`
-[Usuario pide modificar la función de validación]
-
-[IA responde con TODO el archivo completo de 500 líneas]
-\`\`\`
-
-### ✅ CORRECTO - Haz esto:
-\`\`\`
-[Usuario pide modificar la función de validación]
-
-[IA responde SOLO con:]
-
-// MOD-001: VALIDACIÓN DE DATOS [INICIO]
-function validarDatos(datos) {
-  // NUEVA lógica de validación mejorada
-  if (!datos) throw new Error("Datos nulos");
-  if (!Array.isArray(datos)) throw new Error("Datos no son array");
-  return true;
-}
-// MOD-001: FIN
-\`\`\`
-
-**El usuario usará CodeWorkShop para reemplazar SOLO ese módulo en el código completo.**
-
----
-
-## 🎯 RESUMEN RÁPIDO
-
-**Siempre incluye:**
-1. Header con PROYECTO, ARCHIVO, VERSIÓN, FECHA
-2. Módulos con MOD-XXX: DESCRIPCIÓN [INICIO]
-3. Cierre con MOD-XXX: FIN (mismo número)
-4. Numeración secuencial sin saltos
-
-**Cuando modificas:**
-- SOLO entrega el módulo modificado
-- Mantén el número MOD-XXX original
-- Incluye [INICIO] y FIN completos
-
-**Nunca hagas:**
-- Entregar todo el archivo si solo se modificó una función
-- Cambiar números de módulos existentes
-- Olvidar [INICIO] o FIN
-- Usar MOD-XXX dentro de comentarios de código
-
----
-
-✅ **Listo para usar con CodeWorkShop**`;
-
-// MOD-001: COPIAR INSTRUCCIONES IA [INICIO]
+// MOD-001: COPIAR ESTÁNDAR DESDE GOOGLE DOC [INICIO]
 function copiarInstruccionesIA() {
+  mostrarCargando(true);
+  console.log('📋 Obteniendo estándar desde Google Doc...');
+  
+  google.script.run
+    .withSuccessHandler(function(resultado) {
+      mostrarCargando(false);
+      
+      if (!resultado.success) {
+        mostrarNotificacion('❌ ' + resultado.error, 'error');
+        console.error('Error al obtener estándar:', resultado.error);
+        return;
+      }
+      
+      copiarTexto(resultado.texto);
+      console.log('✅ Estándar obtenido correctamente');
+    })
+    .withFailureHandler(function(error) {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error de conexión', 'error');
+      console.error('Error fatal al obtener estándar:', error);
+    })
+    .obtenerEstandar();
+}
+
+function copiarTexto(texto) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(INSTRUCCIONES_IA)
+    navigator.clipboard.writeText(texto)
       .then(() => {
-        mostrarNotificacion('✅ Instrucciones copiadas al portapapeles', 'success');
-        console.log('📋 Instrucciones IA copiadas correctamente');
+        mostrarNotificacion('✅ Estándar CodeWorkShop copiado', 'success');
+        console.log('📋 Estándar copiado al portapapeles');
       })
-      .catch(err => {
-        copiarInstruccionesFallback();
+      .catch(() => {
+        copiarTextoFallback(texto);
       });
   } else {
-    copiarInstruccionesFallback();
+    copiarTextoFallback(texto);
   }
 }
 
-function copiarInstruccionesFallback() {
+function copiarTextoFallback(texto) {
   const textarea = document.createElement('textarea');
-  textarea.value = INSTRUCCIONES_IA;
+  textarea.value = texto;
   textarea.style.position = 'fixed';
   textarea.style.opacity = '0';
   document.body.appendChild(textarea);
@@ -592,29 +506,29 @@ function copiarInstruccionesFallback() {
   try {
     const exitoso = document.execCommand('copy');
     if (exitoso) {
-      mostrarNotificacion('✅ Instrucciones copiadas al portapapeles', 'success');
-      console.log('📋 Instrucciones IA copiadas (fallback)');
+      mostrarNotificacion('✅ Estándar CodeWorkShop copiado', 'success');
+      console.log('📋 Estándar copiado (fallback)');
     } else {
       throw new Error('execCommand falló');
     }
   } catch (err) {
     mostrarNotificacion('❌ No se pudo copiar. Usa Ctrl+C manualmente', 'error');
     console.error('Error al copiar:', err);
-    mostrarModalInstrucciones();
+    mostrarModalEstandar(texto);
   } finally {
     document.body.removeChild(textarea);
   }
 }
 
-function mostrarModalInstrucciones() {
+function mostrarModalEstandar(texto) {
   const modal = document.createElement('div');
   modal.className = 'modal-instrucciones';
   modal.innerHTML = `
     <div class="modal-content">
-      <h3>📋 Instrucciones para IA</h3>
+      <h3>📋 Estándar CodeWorkShop</h3>
       <p>Selecciona todo el texto y copia con Ctrl+C:</p>
       <textarea readonly style="width:100%; height:400px; font-family:monospace;">
-${INSTRUCCIONES_IA}
+${texto}
       </textarea>
       <button onclick="this.closest('.modal-instrucciones').remove()">Cerrar</button>
     </div>
@@ -2169,6 +2083,6 @@ function testSimularValidacion() {
 
 // ============================================
 // FIN DEL SOLID CODE
-// Tamaño total: 60,303 caracteres
+// Tamaño total: 58,195 caracteres
 // Archivos exitosos: 7/7
 // ============================================
