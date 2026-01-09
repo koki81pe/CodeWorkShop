@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeWorkShop</title>
+  <?!= include('style'); ?>
+</head>
+<body>
+  <div class="container">
+    <!-- Header con botón de instrucciones -->
+    <div class="main-header">
+      <div class="header-content">
+        <h1>🔧 CodeWorkShop</h1>
+        <p class="subtitle">Modificación modular y quirúrgica de código</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" onclick="copiarInstruccionesIA()" 
+                title="Copia las instrucciones para entrenar IAs en el formato de modulación">
+          📋 Copiar Instrucciones para IA
+        </button>
+      </div>
+    </div>
+
+    <!-- Sección de carga de código -->
+    <div class="section">
+      <h2>1. Cargar Código Original</h2>
+      <textarea id="codigoOriginal" 
+                class="code-area" 
+                placeholder="Pega aquí tu código con módulos MOD-XXX..."></textarea>
+      <button class="btn-primary" onclick="analizarModulos()">
+        🔍 Analizar Módulos
+      </button>
+    </div>
+
+    <!-- Lista de módulos detectados -->
+    <div class="section" id="seccionModulos" style="display:none;">
+      <h2>2. Seleccionar Módulo a Modificar</h2>
+      <div id="listaModulos" class="modulo-list"></div>
+    </div>
+
+    <!-- Código del módulo seleccionado -->
+    <div class="section" id="seccionModuloActual" style="display:none;">
+      <h2>3. Código Actual del Módulo</h2>
+      <textarea id="moduloActual" 
+                class="code-area" 
+                readonly></textarea>
+    </div>
+
+    <!-- Nuevo código del módulo -->
+    <div class="section" id="seccionNuevoModulo" style="display:none;">
+      <h2>4. Nuevo Código del Módulo</h2>
+      <textarea id="nuevoModulo" 
+                class="code-area" 
+                placeholder="Pega aquí el nuevo código del módulo MOD-XXX..."></textarea>
+      <button class="btn-primary" onclick="aplicarCambio()">
+        ✅ Aplicar Cambio
+      </button>
+    </div>
+
+    <!-- Código resultante -->
+    <div class="section" id="seccionResultado" style="display:none;">
+      <h2>5. Código Resultante</h2>
+      <textarea id="codigoResultante" 
+                class="code-area" 
+                readonly></textarea>
+      <button class="btn-secondary" onclick="copiarResultado()">
+        📋 Copiar Código
+      </button>
+      <button class="btn-secondary" onclick="reiniciar()">
+        🔄 Nueva Modificación
+      </button>
+    </div>
+
+    <!-- Toast de notificaciones -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Loading overlay -->
+    <div id="loading" class="loading-overlay">
+      <div class="spinner"></div>
+      <p>Procesando...</p>
+    </div>
+  </div>
+
+  <?!= include('scripts'); ?>
+</body>
+</html>
