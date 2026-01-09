@@ -1,3 +1,11 @@
+<!--
+╔══════════════════════════════════════════════════════════╗
+║  PROYECTO: CodeWorkShop                                  ║
+║  ARCHIVO:  scripts.html                                  ║
+║  VERSIÓN:  1.1.0                                         ║
+║  FECHA:    10/01/2026 02:15 (UTC-5)                      ║
+╚══════════════════════════════════════════════════════════╝
+-->
 <script>
 // Variables globales
 let codigoOriginal = '';
@@ -455,4 +463,23 @@ function mostrarCargando(mostrar) {
   }
 }
 // MOD-010: FIN
+
+// MOD-011: ABRIR PÁGINA DE TESTS [INICIO]
+function abrirTests() {
+  google.script.run
+    .withSuccessHandler(function(url) {
+      if (url) {
+        window.open(url, '_blank');
+        console.log('🧪 Abriendo tests en:', url);
+      } else {
+        mostrarNotificacion('❌ No se pudo obtener la URL', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      mostrarNotificacion('❌ Error: ' + error.message, 'error');
+      console.error('Error al abrir tests:', error);
+    })
+    .obtenerURLTests();
+}
+// MOD-011: FIN
 </script>
