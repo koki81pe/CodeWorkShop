@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<!--
+╔══════════════════════════════════════════════════════════╗
+║  PROYECTO: CodeWorkShop                                  ║
+║  ARCHIVO:  index.html                                    ║
+║  VERSIÓN:  1.1.0                                         ║
+║  FECHA:    10/01/2026 02:00 (UTC-5)                      ║
+╚══════════════════════════════════════════════════════════╝
+-->
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -7,8 +15,9 @@
   <?!= include('style'); ?>
 </head>
 <body>
+  <!-- MOD-001: CONTAINER PRINCIPAL [INICIO] -->
   <div class="container">
-    <!-- Header con botón de instrucciones -->
+    <!-- MOD-002: HEADER [INICIO] -->
     <div class="main-header">
       <div class="header-content">
         <h1>🔧 CodeWorkShop</h1>
@@ -19,10 +28,15 @@
                 title="Copia las instrucciones para entrenar IAs en el formato de modulación">
           📋 Copiar Instrucciones para IA
         </button>
+        <button class="btn-secondary" onclick="abrirTests()" 
+                title="Ir a la página de tests">
+          🧪 Test
+        </button>
       </div>
     </div>
-
-    <!-- Sección de carga de código -->
+    <!-- MOD-002: FIN -->
+    
+    <!-- MOD-003: SECCIÓN CARGA DE CÓDIGO [INICIO] -->
     <div class="section">
       <h2>1. Cargar Código Original</h2>
       <textarea id="codigoOriginal" 
@@ -32,22 +46,25 @@
         🔍 Analizar Módulos
       </button>
     </div>
-
-    <!-- Lista de módulos detectados -->
+    <!-- MOD-003: FIN -->
+    
+    <!-- MOD-004: SECCIÓN LISTA DE MÓDULOS [INICIO] -->
     <div class="section" id="seccionModulos" style="display:none;">
       <h2>2. Seleccionar Módulo a Modificar</h2>
       <div id="listaModulos" class="modulo-list"></div>
     </div>
-
-    <!-- Código del módulo seleccionado -->
+    <!-- MOD-004: FIN -->
+    
+    <!-- MOD-005: SECCIÓN CÓDIGO ACTUAL [INICIO] -->
     <div class="section" id="seccionModuloActual" style="display:none;">
       <h2>3. Código Actual del Módulo</h2>
       <textarea id="moduloActual" 
                 class="code-area" 
                 readonly></textarea>
     </div>
-
-    <!-- Nuevo código del módulo -->
+    <!-- MOD-005: FIN -->
+    
+    <!-- MOD-006: SECCIÓN NUEVO CÓDIGO [INICIO] -->
     <div class="section" id="seccionNuevoModulo" style="display:none;">
       <h2>4. Nuevo Código del Módulo</h2>
       <textarea id="nuevoModulo" 
@@ -57,8 +74,9 @@
         ✅ Aplicar Cambio
       </button>
     </div>
-
-    <!-- Código resultante -->
+    <!-- MOD-006: FIN -->
+    
+    <!-- MOD-007: SECCIÓN RESULTADO [INICIO] -->
     <div class="section" id="seccionResultado" style="display:none;">
       <h2>5. Código Resultante</h2>
       <textarea id="codigoResultante" 
@@ -71,17 +89,19 @@
         🔄 Nueva Modificación
       </button>
     </div>
-
-    <!-- Toast de notificaciones -->
+    <!-- MOD-007: FIN -->
+    
+    <!-- MOD-008: NOTIFICACIONES Y LOADING [INICIO] -->
     <div id="toast" class="toast"></div>
-
-    <!-- Loading overlay -->
+    
     <div id="loading" class="loading-overlay">
       <div class="spinner"></div>
       <p>Procesando...</p>
     </div>
+    <!-- MOD-008: FIN -->
   </div>
-
+  <!-- MOD-001: FIN -->
+  
   <?!= include('scripts'); ?>
 </body>
 </html>
