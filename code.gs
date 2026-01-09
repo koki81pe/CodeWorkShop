@@ -1,11 +1,9 @@
-/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║ PROYECTO: CodeWorkShop                                   ║
- * ║ ARCHIVO: code.gs                                         ║
- * ║ VERSIÓN: 1.1.1                                           ║
- * ║ FECHA: 10/01/2026 03:00 (UTC-5)                          ║
- * ╚══════════════════════════════════════════════════════════╝
- */
+/******************************************
+PROYECTO: CodeWorkShop
+ARCHIVO: code.gs
+VERSIÓN: 01.06
+FECHA: 10/01/2026 (UTC-5)
+******************************************/
 
 // MOD-001: FORZAR PERMISOS [INICIO]
 /**
@@ -33,6 +31,15 @@ function forzarPermisos() {
     Logger.log('✅ ScriptApp disponible');
   } catch (e) {
     Logger.log('❌ Error con ScriptApp: ' + e);
+  }
+  
+  // Verificar acceso a Google Docs
+  try {
+    DocumentApp.openById('1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA');
+    Logger.log('✅ Permiso DocumentApp autorizado');
+  } catch (e) {
+    Logger.log('❌ Esperando autorización de DocumentApp: ' + e);
+    throw new Error('Autoriza DocumentApp y vuelve a ejecutar');
   }
   
   Logger.log('✅ Permisos verificados. Ahora puedes desplegar la webapp.');
@@ -101,7 +108,7 @@ function parsearModulos(codigoCompleto) {
 // MOD-005: EXTRAER HEADER [INICIO]
 function extraerHeader(codigoCompleto) {
   try {
-    const headerRegex = /\/\*\*[\s\S]*?PROYECTO:\s*(.+?)[\s\S]*?ARCHIVO:\s*(.+?)[\s\S]*?VERSIÓN:\s*(.+?)[\s\S]*?FECHA:\s*(.+?)\*\//;
+    const headerRegex = /\/\*{40}\s*PROYECTO:\s*(.+?)\s*ARCHIVO:\s*(.+?)\s*VERSIÓN:\s*(.+?)\s*FECHA:\s*(.+?)\s*\*{40}\//s;
     const match = codigoCompleto.match(headerRegex);
     
     if (!match) {
@@ -191,8 +198,8 @@ function reemplazarModulo(codigoCompleto, numeroModulo, nuevoCodigoModulo) {
 function actualizarVersion(codigo, headerActual) {
   try {
     const versionParts = headerActual.version.split('.');
-    if (versionParts.length === 3) {
-      versionParts[2] = String(parseInt(versionParts[2]) + 1);
+    if (versionParts.length === 2) {
+      versionParts[1] = String(parseInt(versionParts[1]) + 1).padStart(2, '0');
       const nuevaVersion = versionParts.join('.');
       
       const ahora = new Date();
@@ -201,22 +208,21 @@ function actualizarVersion(codigo, headerActual) {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
         hour12: false
       };
       
-      const fechaFormateada = ahora.toLocaleString('es-PE', opciones)
-        .replace(/(\d+)\/(\d+)\/(\d+),?\s*(\d+):(\d+)/, '$1/$2/$3 $4:$5');
+      const partes = ahora.toLocaleString('es-PE', opciones).split(/[\s,\/]+/);
+      const nuevaFecha = `${partes[0]}/${partes[1]}/${partes[2]} (UTC-5)`;
       
-      const nuevaFecha = fechaFormateada + ' (UTC-5)';
+      const headerRegex = /\/\*{40}[\s\S]*?\*{40}\//;
+      const nuevoHeader = `/******************************************
+PROYECTO: ${headerActual.proyecto}
+ARCHIVO: ${headerActual.archivo}
+VERSIÓN: ${nuevaVersion}
+FECHA: ${nuevaFecha}
+******************************************/`;
       
-      const headerRegex = /\/\*\*[\s\S]*?VERSIÓN:\s*(.+?)[\s\S]*?FECHA:\s*(.+?)\*\//;
-      const codigoActualizado = codigo.replace(headerRegex, function(match) {
-        return match
-          .replace(/VERSIÓN:\s*(.+?)[\s\S]/, `VERSIÓN: ${nuevaVersion}                                        ║\n`)
-          .replace(/FECHA:\s*(.+?)\*\//, `FECHA: ${nuevaFecha}                         ║\n * ╚══════════════════════════════════════════════════════════╝\n */`);
-      });
+      const codigoActualizado = codigo.replace(headerRegex, nuevoHeader);
       
       Logger.log('✅ Versión actualizada: ' + headerActual.version + ' → ' + nuevaVersion);
       return codigoActualizado;
@@ -247,3 +253,55 @@ function obtenerURLTests() {
   }
 }
 // MOD-009: FIN
+
+// MOD-010: OBTENER ESTÁNDAR DESDE GOOGLE DOC [INICIO]
+function obtenerEstandar() {
+  try {
+    const docId = '1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA';
+    const doc = DocumentApp.openById(docId);
+    const texto = doc.getBody().getText();
+    
+    if (!texto || texto.trim() === '') {
+      return { success: false, error: 'El documento está vacío' };
+    }
+    
+    Logger.log('✅ Estándar obtenido desde Google Doc (' + texto.length + ' caracteres)');
+    return { success: true, texto: texto };
+    
+  } catch (error) {
+    Logger.log('❌ Error al obtener estándar: ' + error.message);
+    return { success: false, error: 'No se pudo leer el documento. Verifica los permisos.' };
+  }
+}
+// MOD-010: FIN
+
+// MOD-011: NOTAS [INICIO]
+/*
+DESCRIPCIÓN:
+Backend principal de CodeWorkShop para parseo, validación y reemplazo
+de módulos en código modular. Ahora integrado con Google Docs para el estándar.
+
+DEPENDENCIAS:
+- MOD-002: Requiere archivos HTML (index, style, scripts, testweb)
+- MOD-004: Usa regex para detectar formato MOD-XXX
+- MOD-007: Llama a MOD-004, MOD-005, MOD-006 y MOD-008
+- MOD-010: Requiere acceso a Google Docs API
+
+ADVERTENCIAS:
+- MOD-001: Debe ejecutarse manualmente antes del primer deploy
+- MOD-005: El formato de header es simple (sin marco decorativo)
+- MOD-008: Solo funciona con versiones formato XX.YY (dos secciones)
+- MOD-010: Requiere que el documento esté compartido correctamente
+
+CAMBIOS RECIENTES:
+- v01.06: Integración con Google Doc para el estándar
+- v01.06: Eliminado standard.html
+- v01.06: Agregado MOD-010 para leer Google Doc
+- v01.02: Nuevo formato de header simplificado
+
+PRÓXIMAS MEJORAS:
+- Implementar validación de tabulación en módulos
+- Agregar detección automática de módulo de NOTAS
+- Cache del estándar para reducir llamadas a Google Docs
+*/
+// MOD-011: FIN
