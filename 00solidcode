@@ -1,6 +1,6 @@
 // ============================================
 // SOLID CODE - CODEWORKSHOP
-// Generado: 9/1/2026, 11:39:38 a. m.
+// Generado: 9/1/2026, 4:31:21 p. m.
 // Total de archivos: 7
 // ============================================
 
@@ -15,8 +15,8 @@
  * ╔══════════════════════════════════════════════════════════╗
  * ║ PROYECTO: CodeWorkShop                                   ║
  * ║ ARCHIVO: code.gs                                         ║
- * ║ VERSIÓN: 1.0.1                                          ║
- * ║ FECHA: 09/01/2026 15:30 (UTC-5)                         ║
+ * ║ VERSIÓN: 1.1.1                                           ║
+ * ║ FECHA: 10/01/2026 03:00 (UTC-5)                          ║
  * ╚══════════════════════════════════════════════════════════╝
  */
 
@@ -28,17 +28,28 @@
 function forzarPermisos() {
   try {
     DriveApp.getRootFolder().getName();
+    Logger.log('✅ Permiso Drive autorizado');
   } catch (e) {
-    Logger.log('Esperando autorización de Drive: ' + e);
+    Logger.log('❌ Esperando autorización de Drive: ' + e);
+    throw new Error('Autoriza Drive y vuelve a ejecutar');
   }
   
   try {
     SpreadsheetApp.getActiveSpreadsheet();
+    Logger.log('✅ Permiso Spreadsheet autorizado');
   } catch (e) {
-    Logger.log('Esperando autorización de Spreadsheet: ' + e);
+    Logger.log('⚠️ Spreadsheet no disponible (normal si no hay hoja activa)');
+  }
+  
+  try {
+    ScriptApp.getService().getUrl();
+    Logger.log('✅ ScriptApp disponible');
+  } catch (e) {
+    Logger.log('❌ Error con ScriptApp: ' + e);
   }
   
   Logger.log('✅ Permisos verificados. Ahora puedes desplegar la webapp.');
+  return '✅ Permisos verificados correctamente';
 }
 // MOD-001: FIN
 
@@ -233,6 +244,23 @@ function actualizarVersion(codigo, headerActual) {
 }
 // MOD-008: FIN
 
+// MOD-009: OBTENER URL DE TESTS [INICIO]
+function obtenerURLTests() {
+  try {
+    const url = ScriptApp.getService().getUrl();
+    if (url) {
+      Logger.log('✅ URL obtenida: ' + url);
+      return url + '?page=test';
+    }
+    Logger.log('❌ ScriptApp.getService().getUrl() devolvió null');
+    return null;
+  } catch (error) {
+    Logger.log('❌ Error al obtener URL: ' + error.message);
+    return null;
+  }
+}
+// MOD-009: FIN
+
 
 // ============================================
 // ARCHIVO 2/7: index.html
@@ -240,6 +268,14 @@ function actualizarVersion(codigo, headerActual) {
 // ============================================
 
 <!DOCTYPE html>
+<!--
+╔══════════════════════════════════════════════════════════╗
+║  PROYECTO: CodeWorkShop                                  ║
+║  ARCHIVO:  index.html                                    ║
+║  VERSIÓN:  1.1.0                                         ║
+║  FECHA:    10/01/2026 02:00 (UTC-5)                      ║
+╚══════════════════════════════════════════════════════════╝
+-->
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -248,8 +284,9 @@ function actualizarVersion(codigo, headerActual) {
   <?!= include('style'); ?>
 </head>
 <body>
+  <!-- MOD-001: CONTAINER PRINCIPAL [INICIO] -->
   <div class="container">
-    <!-- Header con botón de instrucciones -->
+    <!-- MOD-002: HEADER [INICIO] -->
     <div class="main-header">
       <div class="header-content">
         <h1>🔧 CodeWorkShop</h1>
@@ -260,10 +297,15 @@ function actualizarVersion(codigo, headerActual) {
                 title="Copia las instrucciones para entrenar IAs en el formato de modulación">
           📋 Copiar Instrucciones para IA
         </button>
+        <button class="btn-secondary" onclick="abrirTests()" 
+                title="Ir a la página de tests">
+          🧪 Test
+        </button>
       </div>
     </div>
-
-    <!-- Sección de carga de código -->
+    <!-- MOD-002: FIN -->
+    
+    <!-- MOD-003: SECCIÓN CARGA DE CÓDIGO [INICIO] -->
     <div class="section">
       <h2>1. Cargar Código Original</h2>
       <textarea id="codigoOriginal" 
@@ -273,22 +315,25 @@ function actualizarVersion(codigo, headerActual) {
         🔍 Analizar Módulos
       </button>
     </div>
-
-    <!-- Lista de módulos detectados -->
+    <!-- MOD-003: FIN -->
+    
+    <!-- MOD-004: SECCIÓN LISTA DE MÓDULOS [INICIO] -->
     <div class="section" id="seccionModulos" style="display:none;">
       <h2>2. Seleccionar Módulo a Modificar</h2>
       <div id="listaModulos" class="modulo-list"></div>
     </div>
-
-    <!-- Código del módulo seleccionado -->
+    <!-- MOD-004: FIN -->
+    
+    <!-- MOD-005: SECCIÓN CÓDIGO ACTUAL [INICIO] -->
     <div class="section" id="seccionModuloActual" style="display:none;">
       <h2>3. Código Actual del Módulo</h2>
       <textarea id="moduloActual" 
                 class="code-area" 
                 readonly></textarea>
     </div>
-
-    <!-- Nuevo código del módulo -->
+    <!-- MOD-005: FIN -->
+    
+    <!-- MOD-006: SECCIÓN NUEVO CÓDIGO [INICIO] -->
     <div class="section" id="seccionNuevoModulo" style="display:none;">
       <h2>4. Nuevo Código del Módulo</h2>
       <textarea id="nuevoModulo" 
@@ -298,8 +343,9 @@ function actualizarVersion(codigo, headerActual) {
         ✅ Aplicar Cambio
       </button>
     </div>
-
-    <!-- Código resultante -->
+    <!-- MOD-006: FIN -->
+    
+    <!-- MOD-007: SECCIÓN RESULTADO [INICIO] -->
     <div class="section" id="seccionResultado" style="display:none;">
       <h2>5. Código Resultante</h2>
       <textarea id="codigoResultante" 
@@ -312,17 +358,19 @@ function actualizarVersion(codigo, headerActual) {
         🔄 Nueva Modificación
       </button>
     </div>
-
-    <!-- Toast de notificaciones -->
+    <!-- MOD-007: FIN -->
+    
+    <!-- MOD-008: NOTIFICACIONES Y LOADING [INICIO] -->
     <div id="toast" class="toast"></div>
-
-    <!-- Loading overlay -->
+    
     <div id="loading" class="loading-overlay">
       <div class="spinner"></div>
       <p>Procesando...</p>
     </div>
+    <!-- MOD-008: FIN -->
   </div>
-
+  <!-- MOD-001: FIN -->
+  
   <?!= include('scripts'); ?>
 </body>
 </html>
@@ -333,6 +381,14 @@ function actualizarVersion(codigo, headerActual) {
 // URL: https://raw.githubusercontent.com/koki81pe/CodeWorkShop/refs/heads/main/scritps.html
 // ============================================
 
+<!--
+╔══════════════════════════════════════════════════════════╗
+║  PROYECTO: CodeWorkShop                                  ║
+║  ARCHIVO:  scripts.html                                  ║
+║  VERSIÓN:  1.1.0                                         ║
+║  FECHA:    10/01/2026 02:15 (UTC-5)                      ║
+╚══════════════════════════════════════════════════════════╝
+-->
 <script>
 // Variables globales
 let codigoOriginal = '';
@@ -790,6 +846,25 @@ function mostrarCargando(mostrar) {
   }
 }
 // MOD-010: FIN
+
+// MOD-011: ABRIR PÁGINA DE TESTS [INICIO]
+function abrirTests() {
+  google.script.run
+    .withSuccessHandler(function(url) {
+      if (url) {
+        window.open(url, '_blank');
+        console.log('🧪 Abriendo tests en:', url);
+      } else {
+        mostrarNotificacion('❌ No se pudo obtener la URL', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      mostrarNotificacion('❌ Error: ' + error.message, 'error');
+      console.error('Error al abrir tests:', error);
+    })
+    .obtenerURLTests();
+}
+// MOD-011: FIN
 </script>
 
 
@@ -1593,11 +1668,21 @@ function testSimularValidacion() {
 // ============================================
 
 <!DOCTYPE html>
+<!--
+╔══════════════════════════════════════════════════════════╗
+║  PROYECTO: CodeWorkShop                                  ║
+║  ARCHIVO:  testweb.html                                  ║
+║  VERSIÓN:  1.1.0                                         ║
+║  FECHA:    10/01/2026 01:30 (UTC-5)                      ║
+╚══════════════════════════════════════════════════════════╝
+-->
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CodeWorkShop - Tests</title>
+  
+  <!-- MOD-001: ESTILOS CSS [INICIO] -->
   <style>
     :root {
       --bg-primary: #0d1117;
@@ -1759,24 +1844,37 @@ function testSimularValidacion() {
       }
     }
   </style>
+  <!-- MOD-001: FIN -->
 </head>
 <body>
+  <!-- MOD-002: ESTRUCTURA HTML [INICIO] -->
   <div class="container">
     <h1>🧪 CodeWorkShop - Tests</h1>
-    <p class="subtitle">Pruebas de Backend y Frontend</p>
+    <p class="subtitle">Pruebas de Backend, Frontend y Logs de Consola</p>
     
     <div class="test-controls">
+      <!-- Tests programados -->
       <button class="primary" onclick="runBackendTests()">
         🔄 Test Backend
       </button>
       <button class="primary" onclick="runFrontendTests()">
-        🔄 Test UI
+        🔄 Test Frontend
       </button>
+      
+      <!-- Captura de logs -->
+      <button class="secondary" onclick="captureConsoleLogs()">
+        🐛 Logs Consola
+      </button>
+      <button class="secondary" onclick="runFullDebug()">
+        🔍 Debug Completo
+      </button>
+      
+      <!-- Utilidades -->
       <button class="secondary" onclick="clearLogs()">
         🗑️ Limpiar
       </button>
       <button class="secondary" onclick="copyLogs()">
-        📋 Copiar Logs
+        📋 Copiar
       </button>
     </div>
     
@@ -1790,50 +1888,217 @@ function testSimularValidacion() {
     
     <div id="toast" class="toast"></div>
   </div>
+  <!-- MOD-002: FIN -->
   
   <script>
+    // MOD-003: CAPTURA DE LOGS DE CONSOLA [INICIO]
+    const consoleLogs = [];
+    
+    const originalLog = console.log;
+    console.log = function(...args) {
+      consoleLogs.push({
+        type: 'log',
+        timestamp: new Date().toISOString(),
+        message: args.map(arg => 
+          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        ).join(' ')
+      });
+      originalLog.apply(console, args);
+    };
+    
+    const originalError = console.error;
+    console.error = function(...args) {
+      consoleLogs.push({
+        type: 'error',
+        timestamp: new Date().toISOString(),
+        message: args.map(arg => String(arg)).join(' ')
+      });
+      originalError.apply(console, args);
+    };
+    
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+      consoleLogs.push({
+        type: 'warn',
+        timestamp: new Date().toISOString(),
+        message: args.map(arg => String(arg)).join(' ')
+      });
+      originalWarn.apply(console, args);
+    };
+    // MOD-003: FIN
+    
+    // MOD-004: TEST BACKEND [INICIO]
     function runBackendTests() {
       showLoading(true);
       clearLogs();
+      console.log('Ejecutando tests del backend...');
       
       google.script.run
         .withSuccessHandler(function(resultado) {
           showLoading(false);
           document.getElementById('logs').textContent = resultado;
           showToast('✅ Tests del Backend completados');
+          console.log('Tests backend completados');
         })
         .withFailureHandler(function(error) {
           showLoading(false);
           document.getElementById('logs').textContent = 'ERROR: ' + error.message;
           showToast('❌ Error al ejecutar tests');
+          console.error('Error en tests backend:', error);
         })
         .allBack();
     }
+    // MOD-004: FIN
     
+    // MOD-005: TEST FRONTEND [INICIO]
     function runFrontendTests() {
       showLoading(true);
       clearLogs();
+      console.log('Ejecutando tests del frontend...');
       
       google.script.run
         .withSuccessHandler(function(resultado) {
           showLoading(false);
           document.getElementById('logs').textContent = resultado;
           showToast('✅ Tests del Frontend completados');
+          console.log('Tests frontend completados');
         })
         .withFailureHandler(function(error) {
           showLoading(false);
           document.getElementById('logs').textContent = 'ERROR: ' + error.message;
           showToast('❌ Error al ejecutar tests');
+          console.error('Error en tests frontend:', error);
         })
         .allFront();
     }
+    // MOD-005: FIN
     
+    // MOD-006: CAPTURAR LOGS CONSOLA [INICIO]
+    function captureConsoleLogs() {
+      showLoading(true);
+      clearLogs();
+      
+      setTimeout(() => {
+        showLoading(false);
+        
+        if (consoleLogs.length === 0) {
+          document.getElementById('logs').textContent = 'No hay logs capturados en esta sesión.\n\nLos logs se capturan desde que se carga esta página.\nEjecuta tests o interactúa con la app principal para generar logs.';
+          showToast('⚠️ Sin logs capturados');
+          return;
+        }
+        
+        let output = '═══════════════════════════════\n';
+        output += 'LOGS DE CONSOLA DEL NAVEGADOR\n';
+        output += '═══════════════════════════════\n\n';
+        
+        consoleLogs.forEach((log, index) => {
+          const icon = log.type === 'error' ? '❌' : 
+                       log.type === 'warn' ? '⚠️' : 'ℹ️';
+          output += `${icon} [${log.timestamp}] ${log.type.toUpperCase()}\n`;
+          output += `   ${log.message}\n\n`;
+        });
+        
+        output += `\nTotal de logs: ${consoleLogs.length}`;
+        
+        document.getElementById('logs').textContent = output;
+        showToast('✅ Logs de consola capturados');
+      }, 500);
+    }
+    // MOD-006: FIN
+    
+    // MOD-007: DEBUG COMPLETO [INICIO]
+    function runFullDebug() {
+      showLoading(true);
+      clearLogs();
+      
+      setTimeout(() => {
+        showLoading(false);
+        
+        let output = '╔════════════════════════════════════════════════════╗\n';
+        output += '║  DEBUG COMPLETO - CodeWorkShop                     ║\n';
+        output += '╚════════════════════════════════════════════════════╝\n\n';
+        
+        output += '🌐 NAVEGADOR\n';
+        output += '─────────────────────────────\n';
+        output += `User Agent: ${navigator.userAgent}\n`;
+        output += `Idioma: ${navigator.language}\n`;
+        output += `Plataforma: ${navigator.platform}\n`;
+        output += `Cookies: ${navigator.cookieEnabled ? 'Habilitadas' : 'Deshabilitadas'}\n`;
+        output += `Online: ${navigator.onLine ? 'Sí' : 'No'}\n\n`;
+        
+        output += '🖥️  VENTANA\n';
+        output += '─────────────────────────────\n';
+        output += `Tamaño: ${window.innerWidth}x${window.innerHeight}\n`;
+        output += `URL actual: ${window.location.href}\n`;
+        output += `URL origen: ${window.location.origin}\n`;
+        output += `Pathname: ${window.location.pathname}\n`;
+        output += `Parámetros: ${window.location.search || 'ninguno'}\n`;
+        output += `Protocolo: ${window.location.protocol}\n\n`;
+        
+        output += '📋 LOGS DE CONSOLA\n';
+        output += '─────────────────────────────\n';
+        if (consoleLogs.length === 0) {
+          output += 'Sin logs capturados\n\n';
+        } else {
+          output += `Total: ${consoleLogs.length} logs\n`;
+          output += `Errores: ${consoleLogs.filter(l => l.type === 'error').length}\n`;
+          output += `Warnings: ${consoleLogs.filter(l => l.type === 'warn').length}\n`;
+          output += `Info: ${consoleLogs.filter(l => l.type === 'log').length}\n\n`;
+          
+          output += 'Últimos 10 logs:\n';
+          consoleLogs.slice(-10).forEach(log => {
+            const icon = log.type === 'error' ? '❌' : 
+                         log.type === 'warn' ? '⚠️' : 'ℹ️';
+            const preview = log.message.length > 60 ? 
+              log.message.substring(0, 60) + '...' : 
+              log.message;
+            output += `${icon} ${preview}\n`;
+          });
+          output += '\n';
+        }
+        
+        output += '⚡ PERFORMANCE\n';
+        output += '─────────────────────────────\n';
+        if (window.performance && window.performance.memory) {
+          const memory = window.performance.memory;
+          output += `Memoria JS usada: ${(memory.usedJSHeapSize / 1048576).toFixed(2)} MB\n`;
+          output += `Límite memoria JS: ${(memory.jsHeapSizeLimit / 1048576).toFixed(2)} MB\n`;
+          output += `Porcentaje usado: ${((memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100).toFixed(1)}%\n`;
+        } else {
+          output += 'Info de memoria no disponible en este navegador\n';
+        }
+        
+        if (window.performance && window.performance.timing) {
+          const timing = window.performance.timing;
+          const loadTime = timing.loadEventEnd - timing.navigationStart;
+          if (loadTime > 0) {
+            output += `Tiempo de carga: ${loadTime}ms\n`;
+          }
+        }
+        
+        output += '\n═══════════════════════════════\n';
+        output += 'Para más detalles, usa F12 y revisa la pestaña Console\n';
+        
+        document.getElementById('logs').textContent = output;
+        showToast('✅ Debug completo generado');
+      }, 500);
+    }
+    // MOD-007: FIN
+    
+    // MOD-008: LIMPIAR LOGS [INICIO]
     function clearLogs() {
       document.getElementById('logs').textContent = 'Logs limpios. Presiona un botón para ejecutar tests...';
     }
+    // MOD-008: FIN
     
+    // MOD-009: COPIAR LOGS [INICIO]
     function copyLogs() {
       const logs = document.getElementById('logs').textContent;
+      
+      if (logs.includes('Presiona un botón') || logs.includes('Logs limpios')) {
+        showToast('⚠️ No hay logs para copiar');
+        return;
+      }
       
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(logs)
@@ -1862,11 +2127,14 @@ function testSimularValidacion() {
         showToast('✅ Logs copiados al portapapeles');
       } catch (err) {
         showToast('❌ No se pudo copiar');
+        console.error('Error al copiar:', err);
       } finally {
         document.body.removeChild(textarea);
       }
     }
+    // MOD-009: FIN
     
+    // MOD-010: MOSTRAR LOADING [INICIO]
     function showLoading(show) {
       const loading = document.getElementById('loading');
       if (show) {
@@ -1877,7 +2145,9 @@ function testSimularValidacion() {
         document.getElementById('logs').style.display = 'block';
       }
     }
+    // MOD-010: FIN
     
+    // MOD-011: MOSTRAR TOAST [INICIO]
     function showToast(mensaje) {
       const toast = document.getElementById('toast');
       toast.textContent = mensaje;
@@ -1887,6 +2157,11 @@ function testSimularValidacion() {
         toast.classList.remove('show');
       }, 3000);
     }
+    // MOD-011: FIN
+    
+    // MOD-012: INICIALIZACIÓN [INICIO]
+    console.log('CodeWorkShop Tests cargado correctamente');
+    // MOD-012: FIN
   </script>
 </body>
 </html>
@@ -1894,6 +2169,6 @@ function testSimularValidacion() {
 
 // ============================================
 // FIN DEL SOLID CODE
-// Tamaño total: 50,008 caracteres
+// Tamaño total: 60,303 caracteres
 // Archivos exitosos: 7/7
 // ============================================
