@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeWorkShop - Tests</title>
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --border-primary: #30363d;
+      --text-primary: #c9d1d9;
+      --text-secondary: #8b949e;
+      --accent-blue: #58a6ff;
+      --accent-green: #238636;
+      --success: #238636;
+      --error: #da3633;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    
+    .test-controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      padding: 10px 20px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    button.primary {
+      background: var(--accent-green);
+      color: white;
+    }
+    
+    button.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-primary);
+    }
+    
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .log-container {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: 6px;
+      padding: 20px;
+      min-height: 400px;
+    }
+    
+    #logs {
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: var(--text-secondary);
+    }
+    
+    .loading.show {
+      display: block;
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-primary);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .toast {
+      position: fixed;
+      bottom: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      padding: 12px 24px;
+      border-radius: 6px;
+      border: 1px solid var(--border-primary);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      transition: bottom 0.3s;
+      z-index: 10000;
+      font-size: 14px;
+    }
+    
+    .toast.show {
+      bottom: 24px;
+    }
+    
+    .toast.success {
+      border-color: var(--success);
+      background: rgba(35, 134, 54, 0.1);
+    }
+    
+    @media (max-width: 768px) {
+      .test-controls {
+        flex-direction: column;
+      }
+      
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 CodeWorkShop - Tests</h1>
+    <p class="subtitle">Pruebas de Backend y Frontend</p>
+    
+    <div class="test-controls">
+      <button class="primary" onclick="runBackendTests()">
+        🔄 Test Backend
+      </button>
+      <button class="primary" onclick="runFrontendTests()">
+        🔄 Test UI
+      </button>
+      <button class="secondary" onclick="clearLogs()">
+        🗑️ Limpiar
+      </button>
+      <button class="secondary" onclick="copyLogs()">
+        📋 Copiar Logs
+      </button>
+    </div>
+    
+    <div class="log-container">
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Ejecutando tests...</p>
+      </div>
+      <pre id="logs">Presiona un botón para ejecutar tests...</pre>
+    </div>
+    
+    <div id="toast" class="toast"></div>
+  </div>
+  
+  <script>
+    function runBackendTests() {
+      showLoading(true);
+      clearLogs();
+      
+      google.script.run
+        .withSuccessHandler(function(resultado) {
+          showLoading(false);
+          document.getElementById('logs').textContent = resultado;
+          showToast('✅ Tests del Backend completados');
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          document.getElementById('logs').textContent = 'ERROR: ' + error.message;
+          showToast('❌ Error al ejecutar tests');
+        })
+        .allBack();
+    }
+    
+    function runFrontendTests() {
+      showLoading(true);
+      clearLogs();
+      
+      google.script.run
+        .withSuccessHandler(function(resultado) {
+          showLoading(false);
+          document.getElementById('logs').textContent = resultado;
+          showToast('✅ Tests del Frontend completados');
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          document.getElementById('logs').textContent = 'ERROR: ' + error.message;
+          showToast('❌ Error al ejecutar tests');
+        })
+        .allFront();
+    }
+    
+    function clearLogs() {
+      document.getElementById('logs').textContent = 'Logs limpios. Presiona un botón para ejecutar tests...';
+    }
+    
+    function copyLogs() {
+      const logs = document.getElementById('logs').textContent;
+      
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(logs)
+          .then(() => {
+            showToast('✅ Logs copiados al portapapeles');
+          })
+          .catch(() => {
+            copyLogsFallback();
+          });
+      } else {
+        copyLogsFallback();
+      }
+    }
+    
+    function copyLogsFallback() {
+      const textarea = document.createElement('textarea');
+      const logs = document.getElementById('logs').textContent;
+      textarea.value = logs;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      
+      try {
+        document.execCommand('copy');
+        showToast('✅ Logs copiados al portapapeles');
+      } catch (err) {
+        showToast('❌ No se pudo copiar');
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    }
+    
+    function showLoading(show) {
+      const loading = document.getElementById('loading');
+      if (show) {
+        loading.classList.add('show');
+        document.getElementById('logs').style.display = 'none';
+      } else {
+        loading.classList.remove('show');
+        document.getElementById('logs').style.display = 'block';
+      }
+    }
+    
+    function showToast(mensaje) {
+      const toast = document.getElementById('toast');
+      toast.textContent = mensaje;
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
