@@ -2,8 +2,8 @@
  * ╔══════════════════════════════════════════════════════════╗
  * ║ PROYECTO: CodeWorkShop                                   ║
  * ║ ARCHIVO: code.gs                                         ║
- * ║ VERSIÓN: 1.0.1                                          ║
- * ║ FECHA: 09/01/2026 15:30 (UTC-5)                         ║
+ * ║ VERSIÓN: 1.1.1                                           ║
+ * ║ FECHA: 10/01/2026 03:00 (UTC-5)                          ║
  * ╚══════════════════════════════════════════════════════════╝
  */
 
@@ -15,17 +15,28 @@
 function forzarPermisos() {
   try {
     DriveApp.getRootFolder().getName();
+    Logger.log('✅ Permiso Drive autorizado');
   } catch (e) {
-    Logger.log('Esperando autorización de Drive: ' + e);
+    Logger.log('❌ Esperando autorización de Drive: ' + e);
+    throw new Error('Autoriza Drive y vuelve a ejecutar');
   }
   
   try {
     SpreadsheetApp.getActiveSpreadsheet();
+    Logger.log('✅ Permiso Spreadsheet autorizado');
   } catch (e) {
-    Logger.log('Esperando autorización de Spreadsheet: ' + e);
+    Logger.log('⚠️ Spreadsheet no disponible (normal si no hay hoja activa)');
+  }
+  
+  try {
+    ScriptApp.getService().getUrl();
+    Logger.log('✅ ScriptApp disponible');
+  } catch (e) {
+    Logger.log('❌ Error con ScriptApp: ' + e);
   }
   
   Logger.log('✅ Permisos verificados. Ahora puedes desplegar la webapp.');
+  return '✅ Permisos verificados correctamente';
 }
 // MOD-001: FIN
 
@@ -219,3 +230,20 @@ function actualizarVersion(codigo, headerActual) {
   }
 }
 // MOD-008: FIN
+
+// MOD-009: OBTENER URL DE TESTS [INICIO]
+function obtenerURLTests() {
+  try {
+    const url = ScriptApp.getService().getUrl();
+    if (url) {
+      Logger.log('✅ URL obtenida: ' + url);
+      return url + '?page=test';
+    }
+    Logger.log('❌ ScriptApp.getService().getUrl() devolvió null');
+    return null;
+  } catch (error) {
+    Logger.log('❌ Error al obtener URL: ' + error.message);
+    return null;
+  }
+}
+// MOD-009: FIN
