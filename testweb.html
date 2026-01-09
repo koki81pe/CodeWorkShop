@@ -1,9 +1,19 @@
 <!DOCTYPE html>
+<!--
+╔══════════════════════════════════════════════════════════╗
+║  PROYECTO: CodeWorkShop                                  ║
+║  ARCHIVO:  testweb.html                                  ║
+║  VERSIÓN:  1.1.0                                         ║
+║  FECHA:    10/01/2026 01:30 (UTC-5)                      ║
+╚══════════════════════════════════════════════════════════╝
+-->
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CodeWorkShop - Tests</title>
+  
+  <!-- MOD-001: ESTILOS CSS [INICIO] -->
   <style>
     :root {
       --bg-primary: #0d1117;
@@ -165,24 +175,37 @@
       }
     }
   </style>
+  <!-- MOD-001: FIN -->
 </head>
 <body>
+  <!-- MOD-002: ESTRUCTURA HTML [INICIO] -->
   <div class="container">
     <h1>🧪 CodeWorkShop - Tests</h1>
-    <p class="subtitle">Pruebas de Backend y Frontend</p>
+    <p class="subtitle">Pruebas de Backend, Frontend y Logs de Consola</p>
     
     <div class="test-controls">
+      <!-- Tests programados -->
       <button class="primary" onclick="runBackendTests()">
         🔄 Test Backend
       </button>
       <button class="primary" onclick="runFrontendTests()">
-        🔄 Test UI
+        🔄 Test Frontend
       </button>
+      
+      <!-- Captura de logs -->
+      <button class="secondary" onclick="captureConsoleLogs()">
+        🐛 Logs Consola
+      </button>
+      <button class="secondary" onclick="runFullDebug()">
+        🔍 Debug Completo
+      </button>
+      
+      <!-- Utilidades -->
       <button class="secondary" onclick="clearLogs()">
         🗑️ Limpiar
       </button>
       <button class="secondary" onclick="copyLogs()">
-        📋 Copiar Logs
+        📋 Copiar
       </button>
     </div>
     
@@ -196,50 +219,217 @@
     
     <div id="toast" class="toast"></div>
   </div>
+  <!-- MOD-002: FIN -->
   
   <script>
+    // MOD-003: CAPTURA DE LOGS DE CONSOLA [INICIO]
+    const consoleLogs = [];
+    
+    const originalLog = console.log;
+    console.log = function(...args) {
+      consoleLogs.push({
+        type: 'log',
+        timestamp: new Date().toISOString(),
+        message: args.map(arg => 
+          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        ).join(' ')
+      });
+      originalLog.apply(console, args);
+    };
+    
+    const originalError = console.error;
+    console.error = function(...args) {
+      consoleLogs.push({
+        type: 'error',
+        timestamp: new Date().toISOString(),
+        message: args.map(arg => String(arg)).join(' ')
+      });
+      originalError.apply(console, args);
+    };
+    
+    const originalWarn = console.warn;
+    console.warn = function(...args) {
+      consoleLogs.push({
+        type: 'warn',
+        timestamp: new Date().toISOString(),
+        message: args.map(arg => String(arg)).join(' ')
+      });
+      originalWarn.apply(console, args);
+    };
+    // MOD-003: FIN
+    
+    // MOD-004: TEST BACKEND [INICIO]
     function runBackendTests() {
       showLoading(true);
       clearLogs();
+      console.log('Ejecutando tests del backend...');
       
       google.script.run
         .withSuccessHandler(function(resultado) {
           showLoading(false);
           document.getElementById('logs').textContent = resultado;
           showToast('✅ Tests del Backend completados');
+          console.log('Tests backend completados');
         })
         .withFailureHandler(function(error) {
           showLoading(false);
           document.getElementById('logs').textContent = 'ERROR: ' + error.message;
           showToast('❌ Error al ejecutar tests');
+          console.error('Error en tests backend:', error);
         })
         .allBack();
     }
+    // MOD-004: FIN
     
+    // MOD-005: TEST FRONTEND [INICIO]
     function runFrontendTests() {
       showLoading(true);
       clearLogs();
+      console.log('Ejecutando tests del frontend...');
       
       google.script.run
         .withSuccessHandler(function(resultado) {
           showLoading(false);
           document.getElementById('logs').textContent = resultado;
           showToast('✅ Tests del Frontend completados');
+          console.log('Tests frontend completados');
         })
         .withFailureHandler(function(error) {
           showLoading(false);
           document.getElementById('logs').textContent = 'ERROR: ' + error.message;
           showToast('❌ Error al ejecutar tests');
+          console.error('Error en tests frontend:', error);
         })
         .allFront();
     }
+    // MOD-005: FIN
     
+    // MOD-006: CAPTURAR LOGS CONSOLA [INICIO]
+    function captureConsoleLogs() {
+      showLoading(true);
+      clearLogs();
+      
+      setTimeout(() => {
+        showLoading(false);
+        
+        if (consoleLogs.length === 0) {
+          document.getElementById('logs').textContent = 'No hay logs capturados en esta sesión.\n\nLos logs se capturan desde que se carga esta página.\nEjecuta tests o interactúa con la app principal para generar logs.';
+          showToast('⚠️ Sin logs capturados');
+          return;
+        }
+        
+        let output = '═══════════════════════════════\n';
+        output += 'LOGS DE CONSOLA DEL NAVEGADOR\n';
+        output += '═══════════════════════════════\n\n';
+        
+        consoleLogs.forEach((log, index) => {
+          const icon = log.type === 'error' ? '❌' : 
+                       log.type === 'warn' ? '⚠️' : 'ℹ️';
+          output += `${icon} [${log.timestamp}] ${log.type.toUpperCase()}\n`;
+          output += `   ${log.message}\n\n`;
+        });
+        
+        output += `\nTotal de logs: ${consoleLogs.length}`;
+        
+        document.getElementById('logs').textContent = output;
+        showToast('✅ Logs de consola capturados');
+      }, 500);
+    }
+    // MOD-006: FIN
+    
+    // MOD-007: DEBUG COMPLETO [INICIO]
+    function runFullDebug() {
+      showLoading(true);
+      clearLogs();
+      
+      setTimeout(() => {
+        showLoading(false);
+        
+        let output = '╔════════════════════════════════════════════════════╗\n';
+        output += '║  DEBUG COMPLETO - CodeWorkShop                     ║\n';
+        output += '╚════════════════════════════════════════════════════╝\n\n';
+        
+        output += '🌐 NAVEGADOR\n';
+        output += '─────────────────────────────\n';
+        output += `User Agent: ${navigator.userAgent}\n`;
+        output += `Idioma: ${navigator.language}\n`;
+        output += `Plataforma: ${navigator.platform}\n`;
+        output += `Cookies: ${navigator.cookieEnabled ? 'Habilitadas' : 'Deshabilitadas'}\n`;
+        output += `Online: ${navigator.onLine ? 'Sí' : 'No'}\n\n`;
+        
+        output += '🖥️  VENTANA\n';
+        output += '─────────────────────────────\n';
+        output += `Tamaño: ${window.innerWidth}x${window.innerHeight}\n`;
+        output += `URL actual: ${window.location.href}\n`;
+        output += `URL origen: ${window.location.origin}\n`;
+        output += `Pathname: ${window.location.pathname}\n`;
+        output += `Parámetros: ${window.location.search || 'ninguno'}\n`;
+        output += `Protocolo: ${window.location.protocol}\n\n`;
+        
+        output += '📋 LOGS DE CONSOLA\n';
+        output += '─────────────────────────────\n';
+        if (consoleLogs.length === 0) {
+          output += 'Sin logs capturados\n\n';
+        } else {
+          output += `Total: ${consoleLogs.length} logs\n`;
+          output += `Errores: ${consoleLogs.filter(l => l.type === 'error').length}\n`;
+          output += `Warnings: ${consoleLogs.filter(l => l.type === 'warn').length}\n`;
+          output += `Info: ${consoleLogs.filter(l => l.type === 'log').length}\n\n`;
+          
+          output += 'Últimos 10 logs:\n';
+          consoleLogs.slice(-10).forEach(log => {
+            const icon = log.type === 'error' ? '❌' : 
+                         log.type === 'warn' ? '⚠️' : 'ℹ️';
+            const preview = log.message.length > 60 ? 
+              log.message.substring(0, 60) + '...' : 
+              log.message;
+            output += `${icon} ${preview}\n`;
+          });
+          output += '\n';
+        }
+        
+        output += '⚡ PERFORMANCE\n';
+        output += '─────────────────────────────\n';
+        if (window.performance && window.performance.memory) {
+          const memory = window.performance.memory;
+          output += `Memoria JS usada: ${(memory.usedJSHeapSize / 1048576).toFixed(2)} MB\n`;
+          output += `Límite memoria JS: ${(memory.jsHeapSizeLimit / 1048576).toFixed(2)} MB\n`;
+          output += `Porcentaje usado: ${((memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100).toFixed(1)}%\n`;
+        } else {
+          output += 'Info de memoria no disponible en este navegador\n';
+        }
+        
+        if (window.performance && window.performance.timing) {
+          const timing = window.performance.timing;
+          const loadTime = timing.loadEventEnd - timing.navigationStart;
+          if (loadTime > 0) {
+            output += `Tiempo de carga: ${loadTime}ms\n`;
+          }
+        }
+        
+        output += '\n═══════════════════════════════\n';
+        output += 'Para más detalles, usa F12 y revisa la pestaña Console\n';
+        
+        document.getElementById('logs').textContent = output;
+        showToast('✅ Debug completo generado');
+      }, 500);
+    }
+    // MOD-007: FIN
+    
+    // MOD-008: LIMPIAR LOGS [INICIO]
     function clearLogs() {
       document.getElementById('logs').textContent = 'Logs limpios. Presiona un botón para ejecutar tests...';
     }
+    // MOD-008: FIN
     
+    // MOD-009: COPIAR LOGS [INICIO]
     function copyLogs() {
       const logs = document.getElementById('logs').textContent;
+      
+      if (logs.includes('Presiona un botón') || logs.includes('Logs limpios')) {
+        showToast('⚠️ No hay logs para copiar');
+        return;
+      }
       
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(logs)
@@ -268,11 +458,14 @@
         showToast('✅ Logs copiados al portapapeles');
       } catch (err) {
         showToast('❌ No se pudo copiar');
+        console.error('Error al copiar:', err);
       } finally {
         document.body.removeChild(textarea);
       }
     }
+    // MOD-009: FIN
     
+    // MOD-010: MOSTRAR LOADING [INICIO]
     function showLoading(show) {
       const loading = document.getElementById('loading');
       if (show) {
@@ -283,7 +476,9 @@
         document.getElementById('logs').style.display = 'block';
       }
     }
+    // MOD-010: FIN
     
+    // MOD-011: MOSTRAR TOAST [INICIO]
     function showToast(mensaje) {
       const toast = document.getElementById('toast');
       toast.textContent = mensaje;
@@ -293,6 +488,11 @@
         toast.classList.remove('show');
       }, 3000);
     }
+    // MOD-011: FIN
+    
+    // MOD-012: INICIALIZACIÓN [INICIO]
+    console.log('CodeWorkShop Tests cargado correctamente');
+    // MOD-012: FIN
   </script>
 </body>
 </html>
