@@ -258,19 +258,45 @@ function obtenerURLTests() {
 function obtenerEstandar() {
   try {
     const docId = '1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA';
-    const doc = DocumentApp.openById(docId);
-    const texto = doc.getBody().getText();
+    
+    // Verificar acceso al documento
+    let doc;
+    try {
+      doc = DocumentApp.openById(docId);
+    } catch (accessError) {
+      Logger.log('❌ Error de acceso al documento: ' + accessError.message);
+      return { 
+        success: false, 
+        error: 'No puedo acceder al documento. Verifica que esté compartido como "Cualquiera con el enlace - Lector"' 
+      };
+    }
+    
+    // Obtener contenido
+    const body = doc.getBody();
+    if (!body) {
+      Logger.log('❌ El documento no tiene cuerpo');
+      return { success: false, error: 'El documento no tiene contenido' };
+    }
+    
+    const texto = body.getText();
     
     if (!texto || texto.trim() === '') {
+      Logger.log('⚠️ El documento está vacío');
       return { success: false, error: 'El documento está vacío' };
     }
     
     Logger.log('✅ Estándar obtenido desde Google Doc (' + texto.length + ' caracteres)');
+    Logger.log('📄 Documento: ' + doc.getName());
+    
     return { success: true, texto: texto };
     
   } catch (error) {
-    Logger.log('❌ Error al obtener estándar: ' + error.message);
-    return { success: false, error: 'No se pudo leer el documento. Verifica los permisos.' };
+    Logger.log('❌ Error inesperado en obtenerEstandar: ' + error.message);
+    Logger.log('Stack trace: ' + error.stack);
+    return { 
+      success: false, 
+      error: 'Error al leer el documento: ' + error.message 
+    };
   }
 }
 // MOD-010: FIN
