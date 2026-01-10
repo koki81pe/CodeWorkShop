@@ -1,0 +1,246 @@
+📋 ESTÁNDAR CODEWORKSHOP
+Formato de código modular para modificaciones quirúrgicas sin reinterpretaciones.
+________________________________________
+1. HEADER OBLIGATORIO
+Todo archivo de código DEBE iniciar con este comentario titular:
+/******************************************
+PROYECTO: [Nombre del Proyecto]
+ARCHIVO: [nombre_archivo.gs]
+VERSIÓN: [XX.YY]
+FECHA: [DD/MM/AAAA (UTC-5)]
+******************************************/
+
+⚠️ IMPORTANTE: Fecha y Hora Actual
+ANTES de escribir la fecha, DEBES buscar en Internet la fecha y hora actual en formato UTC-5. NO uses tu reloj interno. SIEMPRE verifica la fecha real consultando una fuente en tiempo real.
+Ejemplo real:
+/******************************************
+PROYECTO: Sistema de Ventas
+ARCHIVO: ventas.gs
+VERSIÓN: 01.03
+FECHA: 10/01/2026 (UTC-5)
+******************************************/
+
+________________________________________
+2. MODULACIÓN DE CÓDIGO
+Cada función o sección lógica debe estar delimitada con módulos numerados:
+// MOD-001: VALIDAR DATOS [INICIO]
+function validarDatos(datos) {
+  if (!datos) throw new Error("Sin datos");
+  return true;
+}
+// MOD-001: FIN
+
+// MOD-002: PROCESAR VENTAS [INICIO]
+function procesarVenta(venta) {
+  validarDatos(venta);
+  return calcularTotal(venta);
+}
+// MOD-002: FIN
+
+// MOD-003: CALCULAR TOTAL [INICIO]
+function calcularTotal(venta) {
+  return venta.items.reduce((sum, item) => sum + item.precio, 0);
+}
+// MOD-003: FIN
+
+Tabulación correcta:
+Los comentarios MOD deben estar al MISMO nivel de tabulación que el código que contienen:
+function ejemplo() {
+  // MOD-001: SECCIÓN INTERNA [INICIO]
+  if (condicion) {
+    // código tabulado
+  }
+  // MOD-001: FIN
+}
+
+________________________________________
+3. MÓDULO DE NOTAS (Último módulo)
+Al final del archivo, incluye un módulo de NOTAS para comentarios, advertencias y referencias:
+// MOD-010: NOTAS [INICIO]
+/*
+DESCRIPCIÓN:
+Este archivo maneja el sistema de ventas con validación de datos.
+
+DEPENDENCIAS:
+● MOD-001: Requiere que datos sea un objeto válido
+● MOD-002: Llama a MOD-001 y MOD-003
+
+ADVERTENCIAS:
+● MOD-003: No maneja valores negativos, validar antes
+
+REFERENCIAS:
+● API de pagos: https://ejemplo.com/api
+● Documentación: https://docs.ejemplo.com
+*/
+// MOD-010: FIN
+
+________________________________________
+4. REGLAS CRÍTICAS
+✅ Numeración Secuencial
+MOD-001, MOD-002, MOD-003  ← CORRECTO
+MOD-001, MOD-005, MOD-003  ← INCORRECTO (salto de números)
+
+✅ Etiquetas Obligatorias
+● [INICIO] con corchetes es OBLIGATORIO ● FIN debe tener el MISMO número que INICIO
+Ejemplo:
+// MOD-007: FUNCIÓN [INICIO]
+function test() {}
+// MOD-007: FIN
+
+❌ NO usar MOD-XXX dentro del código
+INCORRECTO:
+// MOD-001: VALIDAR [INICIO]
+function validar() {
+  // Este es el MOD-001 que valida... ← NO HACER
+}
+// MOD-001: FIN
+
+CORRECTO:
+// MOD-001: VALIDAR [INICIO]
+function validar() {
+  // Valida que los datos existan
+}
+// MOD-001: FIN
+
+________________________________________
+5. CUANDO MODIFICAS CÓDIGO EXISTENTE
+🎯 REGLA DE ORO:
+Si el código YA tiene módulos, SOLO entrega el módulo modificado.
+Ejemplo de modificación correcta:
+Usuario dice: "Mejora la validación para que acepte arrays vacíos"
+❌ INCORRECTO - NO hagas esto:
+[Entregar todo el archivo de 500 líneas completo]
+
+✅ CORRECTO - Haz esto:
+// MOD-001: VALIDAR DATOS [INICIO]
+function validarDatos(datos) {
+  if (!datos) throw new Error("Sin datos");
+  
+  // Permitir arrays vacíos
+  if (Array.isArray(datos)) return true;
+  
+  if (datos.length === 0) throw new Error("Datos sin elementos");
+  return true;
+}
+// MOD-001: FIN
+
+El usuario usará CodeWorkShop para reemplazar SOLO ese módulo.
+________________________________________
+6. EJEMPLO COMPLETO
+/******************************************
+PROYECTO: Control de Inventario
+ARCHIVO: inventario.gs
+VERSIÓN: 01.00
+FECHA: 10/01/2026 (UTC-5)
+******************************************/
+
+// MOD-001: CONFIGURACIÓN [INICIO]
+const CONFIG = {
+  hoja: "Inventario",
+  colProducto: 0,
+  colStock: 1
+};
+// MOD-001: FIN
+
+// MOD-002: OBTENER HOJA [INICIO]
+function obtenerHoja() {
+  return SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName(CONFIG.hoja);
+}
+// MOD-002: FIN
+
+// MOD-003: BUSCAR PRODUCTO [INICIO]
+function buscarProducto(codigo) {
+  const hoja = obtenerHoja();
+  const datos = hoja.getDataRange().getValues();
+  
+  for (let i = 1; i < datos.length; i++) {
+    if (datos[i][CONFIG.colProducto] === codigo) {
+      return {
+        fila: i + 1,
+        stock: datos[i][CONFIG.colStock]
+      };
+    }
+  }
+  
+  return null;
+}
+// MOD-003: FIN
+
+// MOD-004: ACTUALIZAR STOCK [INICIO]
+function actualizarStock(codigo, cantidad) {
+  const prod = buscarProducto(codigo);
+  if (!prod) throw new Error("Producto no encontrado");
+  
+  const hoja = obtenerHoja();
+  const nuevoStock = prod.stock + cantidad;
+  hoja.getRange(prod.fila, CONFIG.colStock + 1).setValue(nuevoStock);
+  
+  return nuevoStock;
+}
+// MOD-004: FIN
+
+// MOD-005: NOTAS [INICIO]
+/*
+DESCRIPCIÓN:
+Sistema básico de inventario con búsqueda y actualización de stock.
+
+DEPENDENCIAS:
+● MOD-002: Requiere hoja "Inventario" en el Spreadsheet
+● MOD-003: Usa configuración de MOD-001
+● MOD-004: Llama a MOD-002 y MOD-003
+
+ADVERTENCIAS:
+● MOD-003: Devuelve null si no encuentra el producto
+● MOD-004: Lanza error si producto no existe
+
+PRÓXIMAS MEJORAS:
+● Agregar validación de cantidad negativa
+● Implementar registro de movimientos
+*/
+// MOD-005: FIN
+
+________________________________________
+7. RESUMEN
+SIEMPRE:
+✅ Header con fecha consultada en Internet (UTC-5) ✅ Módulos numerados secuencialmente (MOD-001, MOD-002...) ✅ [INICIO] y FIN con el mismo número ✅ Módulo de NOTAS al final ✅ Solo entregar el módulo modificado cuando el código ya existe
+NUNCA:
+❌ Saltar números en módulos ❌ Usar MOD-XXX dentro de comentarios del código ❌ Olvidar [INICIO] o FIN ❌ Entregar todo el archivo si solo cambió una función ❌ Usar fecha/hora de tu reloj interno (consultar en Internet)
+________________________________________
+✅ Listo para CodeWorkShop
+________________________________________
+INSTRUCCIONES PARA CONFIGURACIÓN:
+1.	Copia todo el texto anterior en un Google Doc nuevo
+
+2.	Aplica NEGRITA a estos títulos:
+
+○	"1. HEADER OBLIGATORIO"
+○	"⚠️ IMPORTANTE: Fecha y Hora Actual"
+○	"Ejemplo real:"
+○	"2. MODULACIÓN DE CÓDIGO"
+○	"Tabulación correcta:"
+○	"3. MÓDULO DE NOTAS (Último módulo)"
+○	"4. REGLAS CRÍTICAS"
+○	"✅ Numeración Secuencial"
+○	"✅ Etiquetas Obligatorias"
+○	"❌ NO usar MOD-XXX dentro del código"
+○	"5. CUANDO MODIFICAS CÓDIGO EXISTENTE"
+○	"🎯 REGLA DE ORO:"
+○	"Ejemplo de modificación correcta:"
+○	"6. EJEMPLO COMPLETO"
+○	"7. RESUMEN"
+3.	Usa fuente monoespaciada (Courier New o Consolas) para los bloques de código
+
+4.	Ve a: Archivo → Compartir → Publicar en la web → Publicar
+
+5.	Configura los permisos: "Cualquiera con el enlace puede ver"
+
+6.	Copia el ID del documento (está en la URL entre /d/ y /edit)
+
+○	Ejemplo: docs.google.com/document/d/[ESTE_ES_EL_ID]/edit
+7.	Pega ese ID en el archivo code.gs en la función obtenerEstandar()
+
+IMPORTANTE:
+● Mantén el formato simple (texto plano con negritas)
+● Los espacios y saltos de línea se respetan tal cual
+
