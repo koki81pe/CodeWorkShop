@@ -1,18 +1,26 @@
+<!-- MOD-001: ENCABEZADO [INICIO] -->
 <!--
-/******************************************
+*****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.06
-FECHA: 10/01/2026 (UTC-5)
-******************************************/
+VERSIÓN: 01.07
+FECHA: 10/01/2026 15:50 (UTC-5)
+*****************************************
 -->
+<!-- MOD-001: FIN -->
+
+<!-- MOD-002: APERTURA SCRIPT [INICIO] -->
 <script>
-// Variables globales
+<!-- MOD-002: FIN -->
+
+<!-- MOD-003: VARIABLES GLOBALES [INICIO] -->
+<!-- Variables de estado de la aplicación -->
 let codigoOriginal = '';
 let modulosDetectados = [];
 let moduloSeleccionado = null;
+<!-- MOD-003: FIN -->
 
-// MOD-001: COPIAR ESTÁNDAR DESDE GOOGLE DOC [INICIO]
+<!-- MOD-004: COPIAR ESTÁNDAR DESDE GOOGLE DOC [INICIO] -->
 function copiarInstruccionesIA() {
   mostrarCargando(true);
   console.log('📋 Obteniendo estándar desde Google Doc...');
@@ -93,9 +101,9 @@ ${texto}
   `;
   document.body.appendChild(modal);
 }
-// MOD-001: FIN
+<!-- MOD-004: FIN -->
 
-// MOD-002: ANALIZAR MÓDULOS [INICIO]
+<!-- MOD-005: ANALIZAR MÓDULOS [INICIO] -->
 function analizarModulos() {
   const codigo = document.getElementById('codigoOriginal').value;
   
@@ -125,8 +133,12 @@ function analizarModulos() {
       codigoOriginal = codigo;
       modulosDetectados = resultado.modulos;
       mostrarModulos(resultado.modulos);
-      mostrarNotificacion('✅ Módulos detectados: ' + resultado.modulos.length, 'success');
+      
+      <!-- Mostrar tipo de archivo detectado -->
+      const tipoMensaje = resultado.tipo === 'html' ? 'HTML' : 'GS';
+      mostrarNotificacion('✅ Módulos detectados: ' + resultado.modulos.length + ' (tipo: ' + tipoMensaje + ')', 'success');
       console.log('🔍 Módulos detectados:', resultado.modulos);
+      console.log('📄 Tipo de archivo:', resultado.tipo);
     })
     .withFailureHandler(function(error) {
       mostrarCargando(false);
@@ -135,9 +147,9 @@ function analizarModulos() {
     })
     .parsearModulos(codigo);
 }
-// MOD-002: FIN
+<!-- MOD-005: FIN -->
 
-// MOD-003: MOSTRAR MÓDULOS [INICIO]
+<!-- MOD-006: MOSTRAR MÓDULOS [INICIO] -->
 function mostrarModulos(modulos) {
   const lista = document.getElementById('listaModulos');
   lista.innerHTML = '';
@@ -147,8 +159,13 @@ function mostrarModulos(modulos) {
     item.className = 'modulo-item';
     item.onclick = () => seleccionarModulo(index);
     
+    <!-- Agregar badge del tipo de archivo -->
+    const tipoBadge = modulo.tipo === 'html' 
+      ? '<span style="font-size:10px;opacity:0.7;margin-left:8px;">HTML</span>' 
+      : '<span style="font-size:10px;opacity:0.7;margin-left:8px;">GS</span>';
+    
     item.innerHTML = `
-      <span class="modulo-numero">MOD-${modulo.numero}</span>
+      <span class="modulo-numero">MOD-${modulo.numero}${tipoBadge}</span>
       <span class="modulo-descripcion">${modulo.descripcion}</span>
     `;
     
@@ -157,9 +174,9 @@ function mostrarModulos(modulos) {
   
   document.getElementById('seccionModulos').style.display = 'block';
 }
-// MOD-003: FIN
+<!-- MOD-006: FIN -->
 
-// MOD-004: SELECCIONAR MÓDULO [INICIO]
+<!-- MOD-007: SELECCIONAR MÓDULO [INICIO] -->
 function seleccionarModulo(index) {
   moduloSeleccionado = modulosDetectados[index];
   
@@ -178,9 +195,9 @@ function seleccionarModulo(index) {
   mostrarNotificacion('✅ Módulo MOD-' + moduloSeleccionado.numero + ' seleccionado', 'info');
   console.log('📌 Módulo seleccionado:', moduloSeleccionado);
 }
-// MOD-004: FIN
+<!-- MOD-007: FIN -->
 
-// MOD-005: APLICAR CAMBIO [INICIO]
+<!-- MOD-008: APLICAR CAMBIO [INICIO] -->
 function aplicarCambio() {
   if (!validarAntesDeEnviar()) {
     return;
@@ -215,9 +232,9 @@ function aplicarCambio() {
     })
     .reemplazarModulo(codigoOriginal, moduloSeleccionado.numero, nuevoModulo);
 }
-// MOD-005: FIN
+<!-- MOD-008: FIN -->
 
-// MOD-006: VALIDAR ANTES DE ENVIAR [INICIO]
+<!-- MOD-009: VALIDAR ANTES DE ENVIAR [INICIO] -->
 function validarAntesDeEnviar() {
   if (!codigoOriginal) {
     mostrarNotificacion('⚠️ Primero carga el código original', 'warning');
@@ -237,9 +254,9 @@ function validarAntesDeEnviar() {
   
   return true;
 }
-// MOD-006: FIN
+<!-- MOD-009: FIN -->
 
-// MOD-007: COPIAR RESULTADO [INICIO]
+<!-- MOD-010: COPIAR RESULTADO [INICIO] -->
 function copiarResultado() {
   const codigo = document.getElementById('codigoResultante').value;
   
@@ -267,9 +284,9 @@ function copiarResultadoFallback() {
     mostrarNotificacion('❌ No se pudo copiar', 'error');
   }
 }
-// MOD-007: FIN
+<!-- MOD-010: FIN -->
 
-// MOD-008: REINICIAR [INICIO]
+<!-- MOD-011: REINICIAR [INICIO] -->
 function reiniciar() {
   document.getElementById('codigoOriginal').value = '';
   document.getElementById('nuevoModulo').value = '';
@@ -287,9 +304,9 @@ function reiniciar() {
   mostrarNotificacion('🔄 Listo para nueva modificación', 'info');
   console.log('🔄 Aplicación reiniciada');
 }
-// MOD-008: FIN
+<!-- MOD-011: FIN -->
 
-// MOD-009: NOTIFICACIONES [INICIO]
+<!-- MOD-012: NOTIFICACIONES [INICIO] -->
 function mostrarNotificacion(mensaje, tipo = 'success') {
   const toast = document.getElementById('toast');
   const iconos = {
@@ -306,9 +323,9 @@ function mostrarNotificacion(mensaje, tipo = 'success') {
     toast.className = 'toast';
   }, 3000);
 }
-// MOD-009: FIN
+<!-- MOD-012: FIN -->
 
-// MOD-010: LOADING OVERLAY [INICIO]
+<!-- MOD-013: LOADING OVERLAY [INICIO] -->
 function mostrarCargando(mostrar) {
   const loading = document.getElementById('loading');
   if (mostrar) {
@@ -317,9 +334,9 @@ function mostrarCargando(mostrar) {
     loading.classList.remove('show');
   }
 }
-// MOD-010: FIN
+<!-- MOD-013: FIN -->
 
-// MOD-011: ABRIR PÁGINA DE TESTS [INICIO]
+<!-- MOD-014: ABRIR PÁGINA DE TESTS [INICIO] -->
 function abrirTests() {
   google.script.run
     .withSuccessHandler(function(url) {
@@ -336,5 +353,60 @@ function abrirTests() {
     })
     .obtenerURLTests();
 }
-// MOD-011: FIN
+<!-- MOD-014: FIN -->
+
+<!-- MOD-015: CÓDIGO DE CIERRE [INICIO] -->
+<!-- Inicialización completada -->
+console.log('✅ Scripts de CodeWorkShop cargados');
+console.log('📋 Soporta archivos .GS y .HTML (CodeWorkshop v2.2)');
+<!-- MOD-015: FIN -->
+
+<!-- MOD-016: CIERRE SCRIPT [INICIO] -->
 </script>
+<!-- MOD-016: FIN -->
+
+<!-- MOD-017: NOTAS [INICIO] -->
+<!--
+DESCRIPCIÓN:
+Scripts frontend de CodeWorkShop para la interfaz de usuario.
+Maneja la interacción con el backend, visualización de módulos,
+y gestión del flujo de trabajo de modificación modular.
+
+CAMBIOS EN v01.07 (CRÍTICO):
+- Cumple con estándar CodeWorkshop v2.2 para archivos HTML
+- TODOS los comentarios usan sintaxis HTML: |
+- MOD-003: Variables globales ahora están en su propio módulo
+- MOD-005: Ahora muestra el tipo de archivo detectado (GS/HTML)
+- MOD-006: Agrega badge visual para identificar tipo de módulo
+- MOD-016: Módulo de cierre de script agregado
+- MOD-017: Módulo de NOTAS agregado
+
+DEPENDENCIAS:
+- MOD-004: Requiere obtenerEstandar() del backend (code.gs MOD-012)
+- MOD-005: Requiere parsearModulos() del backend (code.gs MOD-006)
+- MOD-008: Requiere reemplazarModulo() del backend (code.gs MOD-009)
+- MOD-014: Requiere obtenerURLTests() del backend (code.gs MOD-011)
+- Todos los módulos requieren elementos HTML de index.html
+
+ADVERTENCIAS:
+- MOD-005: Valida que el código contenga 'MOD-' antes de enviar al backend
+- MOD-006: El badge de tipo se muestra solo si el módulo tiene propiedad 'tipo'
+- MOD-009: La validación es básica, el backend hace validación más estricta
+- MOD-012: Los toasts se ocultan automáticamente después de 3 segundos
+
+ESTRUCTURA DE MÓDULOS:
+- MOD-001: Encabezado con metadata del archivo
+- MOD-002: Apertura del tag script
+- MOD-003: Variables globales
+- MOD-004 a MOD-014: Funciones de la aplicación
+- MOD-015: Código de cierre (logs de inicialización)
+- MOD-016: Cierre del tag script
+- MOD-017: Notas y documentación (este módulo)
+
+PRÓXIMAS MEJORAS:
+- Agregar validación de sintaxis en el cliente antes de enviar
+- Implementar preview del cambio antes de aplicar
+- Agregar historial de cambios (undo/redo)
+- Mejorar visualización de diferencias entre módulo original y nuevo
+-->
+<!-- MOD-017: FIN -->
