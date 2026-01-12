@@ -135,6 +135,12 @@ FECHA: 10/01/2026 14:35 (UTC-5)
 IMPORTANTE: Este header DEBE estar protegido dentro de MOD-001: ENCABEZADO (ver siguiente sección).
 
 2. ESTRUCTURA DE MÓDULOS OBLIGATORIOS
+Contemplaciones de la estructura
+MOD-001 debe ser la primera línea del archivo. Todo código ejecutable, incluso declaraciones como <!DOCTYPE html>, debe ir dentro de algún módulo, nunca antes de MOD-001.
+NUNCA dejes código antes de MOD-001. Incluso <!DOCTYPE html> debe ir dentro del módulo de APERTURA, no antes del ENCABEZADO.
+MOD-001 es SOLO para el encabezado (metadatos: proyecto, archivo, versión, fecha). MOD-002 es SIEMPRE para el código de apertura o primer tramo del código vivo (en .HTML: <!DOCTYPE>, <html>, <head>, <body>; en .GS: configuraciones o primera función).
+Todos los comentarios, notas y documentación van al FINAL en el último módulo MOD-YYY: NOTAS. NO crear módulos intermedios entre MOD-001 y MOD-002 para comentarios. Esto previene que comentarios medianos o extensos interfieran con la modularización del código ejecutable, permitiendo que herramientas como CodeWorkShop realicen reemplazos quirúrgicos sin afectar la documentación.
+
 Todo código DEBE seguir esta estructura de módulos en orden:
 MOD-001: ENCABEZADO (Obligatorio en todos los archivos)
 Propósito: Proteger los metadatos del proyecto (nombre, archivo, versión, fecha).
@@ -696,4 +702,3 @@ Tabla de referencia rápida corregida
 Eliminada toda ambigüedad sobre qué comentarios usar
 Énfasis en que es una decisión técnica, no estética
 Documentación clara de que un archivo = un tipo de comentario
-
