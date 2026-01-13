@@ -1,13 +1,15 @@
+// MOD-001: ENCABEZADO [INICIO]
 /*
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.06
-FECHA: 10/01/2026 (UTC-5)
+VERSIÓN: 01.07
+FECHA: 10/01/2026 15:45 (UTC-5)
 *****************************************
 */
+// MOD-001: FIN
 
-// MOD-001: FORZAR PERMISOS [INICIO]
+// MOD-002: FORZAR PERMISOS [INICIO]
 /**
  * Esta función DEBE ejecutarse manualmente una vez desde el editor
  * antes de desplegar la webapp para activar el flujo de autorización
@@ -35,7 +37,6 @@ function forzarPermisos() {
     Logger.log('❌ Error con ScriptApp: ' + e);
   }
   
-  // Verificar acceso a Google Docs
   try {
     DocumentApp.openById('1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA');
     Logger.log('✅ Permiso DocumentApp autorizado');
@@ -47,9 +48,9 @@ function forzarPermisos() {
   Logger.log('✅ Permisos verificados. Ahora puedes desplegar la webapp.');
   return '✅ Permisos verificados correctamente';
 }
-// MOD-001: FIN
+// MOD-002: FIN
 
-// MOD-002: SERVIR HTML [INICIO]
+// MOD-003: SERVIR HTML [INICIO]
 function doGet(e) {
   const page = e.parameter.page || 'index';
   
@@ -64,22 +65,65 @@ function doGet(e) {
     .setTitle('CodeWorkShop')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
-// MOD-002: FIN
+// MOD-003: FIN
 
-// MOD-003: INCLUIR ARCHIVOS HTML [INICIO]
+// MOD-004: INCLUIR ARCHIVOS HTML [INICIO]
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
-// MOD-003: FIN
+// MOD-004: FIN
 
-// MOD-004: PARSEAR MÓDULOS [INICIO]
+// MOD-005: DETECTAR TIPO DE ARCHIVO [INICIO]
+/**
+ * Detecta si el código es .GS o .HTML basándose en su contenido
+ * @param {string} codigo - El código completo a analizar
+ * @return {string} 'gs' o 'html'
+ */
+function detectarTipoArchivo(codigo) {
+  // Si contiene comentarios HTML de módulo, es HTML
+  if (/<!--\s*MOD-\d{3}:/i.test(codigo)) {
+    return 'html';
+  }
+  
+  // Si contiene comentarios JS de módulo, es GS
+  if (/\/\/\s*MOD-\d{3}:/i.test(codigo)) {
+    return 'gs';
+  }
+  
+  // Fallback: detectar por tags HTML
+  if (/<html|<script|<style|<!DOCTYPE/i.test(codigo)) {
+    return 'html';
+  }
+  
+  // Por defecto, asumimos GS
+  return 'gs';
+}
+// MOD-005: FIN
+
+// MOD-006: PARSEAR MÓDULOS [INICIO]
+/**
+ * Parsea módulos del código detectando automáticamente el tipo de archivo
+ * Soporta archivos .GS (// comentarios) y .HTML (<!-- comentarios -->)
+ */
 function parsearModulos(codigoCompleto) {
   try {
     if (!codigoCompleto || codigoCompleto.trim() === '') {
       return { success: false, error: 'Código vacío' };
     }
     
-    const modulosRegex = /\/\/\s*MOD-(\d{3}):\s*(.+?)\s*\[INICIO\]([\s\S]*?)\/\/\s*MOD-\1:\s*FIN/g;
+    const tipoArchivo = detectarTipoArchivo(codigoCompleto);
+    Logger.log('📄 Tipo de archivo detectado: ' + tipoArchivo.toUpperCase());
+    
+    let modulosRegex;
+    
+    if (tipoArchivo === 'html') {
+      // Regex para archivos HTML: <!-- MOD-XXX: ... [INICIO] --> ... <!-- MOD-XXX: FIN -->
+      modulosRegex = /<!--\s*MOD-(\d{3}):\s*(.+?)\s*\[INICIO\]\s*-->([\s\S]*?)<!--\s*MOD-\1:\s*FIN\s*-->/g;
+    } else {
+      // Regex para archivos GS: // MOD-XXX: ... [INICIO] ... // MOD-XXX: FIN
+      modulosRegex = /\/\/\s*MOD-(\d{3}):\s*(.+?)\s*\[INICIO\]([\s\S]*?)\/\/\s*MOD-\1:\s*FIN/g;
+    }
+    
     const modulos = [];
     let match;
     
@@ -89,7 +133,8 @@ function parsearModulos(codigoCompleto) {
         descripcion: match[2].trim(),
         codigo: match[0],
         inicio: match.index,
-        fin: match.index + match[0].length
+        fin: match.index + match[0].length,
+        tipo: tipoArchivo
       });
     }
     
@@ -97,20 +142,34 @@ function parsearModulos(codigoCompleto) {
       return { success: false, error: 'No se detectaron módulos válidos' };
     }
     
-    Logger.log('✅ Módulos parseados: ' + modulos.length);
-    return { success: true, modulos: modulos };
+    Logger.log('✅ Módulos parseados: ' + modulos.length + ' (tipo: ' + tipoArchivo + ')');
+    return { success: true, modulos: modulos, tipo: tipoArchivo };
     
   } catch (error) {
     Logger.log('❌ Error en parsearModulos: ' + error.message);
     return { success: false, error: error.message };
   }
 }
-// MOD-004: FIN
+// MOD-006: FIN
 
-// MOD-005: EXTRAER HEADER [INICIO]
+// MOD-007: EXTRAER HEADER [INICIO]
+/**
+ * Extrae el header del código, soportando ambos formatos (.GS y .HTML)
+ */
 function extraerHeader(codigoCompleto) {
   try {
-    const headerRegex = /\/\*{40}\s*PROYECTO:\s*(.+?)\s*ARCHIVO:\s*(.+?)\s*VERSIÓN:\s*(.+?)\s*FECHA:\s*(.+?)\s*\*{40}\//s;
+    const tipoArchivo = detectarTipoArchivo(codigoCompleto);
+    
+    let headerRegex;
+    
+    if (tipoArchivo === 'html') {
+      // Header en HTML: <!-- ... -->
+      headerRegex = /<!--\s*\*+\s*PROYECTO:\s*(.+?)\s*ARCHIVO:\s*(.+?)\s*VERSIÓN:\s*(.+?)\s*FECHA:\s*(.+?)\s*\*+\s*-->/s;
+    } else {
+      // Header en GS: /* ... */
+      headerRegex = /\/\*\s*\*+\s*PROYECTO:\s*(.+?)\s*ARCHIVO:\s*(.+?)\s*VERSIÓN:\s*(.+?)\s*FECHA:\s*(.+?)\s*\*+\s*\*\//s;
+    }
+    
     const match = codigoCompleto.match(headerRegex);
     
     if (!match) {
@@ -121,10 +180,11 @@ function extraerHeader(codigoCompleto) {
       proyecto: match[1].trim(),
       archivo: match[2].trim(),
       version: match[3].trim(),
-      fecha: match[4].trim()
+      fecha: match[4].trim(),
+      tipo: tipoArchivo
     };
     
-    Logger.log('✅ Header extraído: ' + header.proyecto);
+    Logger.log('✅ Header extraído: ' + header.proyecto + ' (tipo: ' + tipoArchivo + ')');
     return { success: true, header: header };
     
   } catch (error) {
@@ -132,17 +192,32 @@ function extraerHeader(codigoCompleto) {
     return { success: false, error: error.message };
   }
 }
-// MOD-005: FIN
+// MOD-007: FIN
 
-// MOD-006: VALIDAR MÓDULO [INICIO]
+// MOD-008: VALIDAR MÓDULO [INICIO]
+/**
+ * Valida que un módulo tenga el formato correcto según su tipo
+ */
 function validarModulo(codigoModulo, numeroEsperado) {
   try {
-    const inicioRegex = new RegExp(`\\/\\/\\s*MOD-${numeroEsperado}:\\s*.+?\\s*\\[INICIO\\]`);
+    const tipoArchivo = detectarTipoArchivo(codigoModulo);
+    
+    let inicioRegex, finRegex;
+    
+    if (tipoArchivo === 'html') {
+      // Validación para HTML
+      inicioRegex = new RegExp(`<!--\\s*MOD-${numeroEsperado}:\\s*.+?\\s*\\[INICIO\\]\\s*-->`);
+      finRegex = new RegExp(`<!--\\s*MOD-${numeroEsperado}:\\s*FIN\\s*-->`);
+    } else {
+      // Validación para GS
+      inicioRegex = new RegExp(`\\/\\/\\s*MOD-${numeroEsperado}:\\s*.+?\\s*\\[INICIO\\]`);
+      finRegex = new RegExp(`\\/\\/\\s*MOD-${numeroEsperado}:\\s*FIN`);
+    }
+    
     if (!inicioRegex.test(codigoModulo)) {
       return { success: false, error: `Falta [INICIO] en MOD-${numeroEsperado}` };
     }
     
-    const finRegex = new RegExp(`\\/\\/\\s*MOD-${numeroEsperado}:\\s*FIN`);
     if (!finRegex.test(codigoModulo)) {
       return { success: false, error: `Falta FIN en MOD-${numeroEsperado}` };
     }
@@ -154,9 +229,13 @@ function validarModulo(codigoModulo, numeroEsperado) {
     return { success: false, error: error.message };
   }
 }
-// MOD-006: FIN
+// MOD-008: FIN
 
-// MOD-007: REEMPLAZAR MÓDULO [INICIO]
+// MOD-009: REEMPLAZAR MÓDULO [INICIO]
+/**
+ * Reemplaza un módulo específico en el código
+ * Detecta automáticamente el tipo de archivo y usa el formato correcto
+ */
 function reemplazarModulo(codigoCompleto, numeroModulo, nuevoCodigoModulo) {
   try {
     if (!codigoCompleto || !numeroModulo || !nuevoCodigoModulo) {
@@ -168,10 +247,22 @@ function reemplazarModulo(codigoCompleto, numeroModulo, nuevoCodigoModulo) {
       return validacion;
     }
     
-    const moduloRegex = new RegExp(
-      `\\/\\/\\s*MOD-${numeroModulo}:\\s*.+?\\s*\\[INICIO\\][\\s\\S]*?\\/\\/\\s*MOD-${numeroModulo}:\\s*FIN`,
-      'g'
-    );
+    const tipoArchivo = detectarTipoArchivo(codigoCompleto);
+    let moduloRegex;
+    
+    if (tipoArchivo === 'html') {
+      // Regex para HTML
+      moduloRegex = new RegExp(
+        `<!--\\s*MOD-${numeroModulo}:\\s*.+?\\s*\\[INICIO\\]\\s*-->[\\s\\S]*?<!--\\s*MOD-${numeroModulo}:\\s*FIN\\s*-->`,
+        'g'
+      );
+    } else {
+      // Regex para GS
+      moduloRegex = new RegExp(
+        `\\/\\/\\s*MOD-${numeroModulo}:\\s*.+?\\s*\\[INICIO\\][\\s\\S]*?\\/\\/\\s*MOD-${numeroModulo}:\\s*FIN`,
+        'g'
+      );
+    }
     
     if (!moduloRegex.test(codigoCompleto)) {
       return { success: false, error: `Módulo MOD-${numeroModulo} no encontrado en el código original` };
@@ -194,9 +285,13 @@ function reemplazarModulo(codigoCompleto, numeroModulo, nuevoCodigoModulo) {
     return { success: false, error: error.message };
   }
 }
-// MOD-007: FIN
+// MOD-009: FIN
 
-// MOD-008: ACTUALIZAR VERSIÓN [INICIO]
+// MOD-010: ACTUALIZAR VERSIÓN [INICIO]
+/**
+ * Actualiza automáticamente la versión y fecha en el header
+ * Soporta ambos formatos (.GS y .HTML)
+ */
 function actualizarVersion(codigo, headerActual) {
   try {
     const versionParts = headerActual.version.split('.');
@@ -205,27 +300,46 @@ function actualizarVersion(codigo, headerActual) {
       const nuevaVersion = versionParts.join('.');
       
       const ahora = new Date();
-      const opciones = { 
+      const opciones = {
         timeZone: 'America/Lima',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
         hour12: false
       };
       
       const partes = ahora.toLocaleString('es-PE', opciones).split(/[\s,\/]+/);
-      const nuevaFecha = `${partes[0]}/${partes[1]}/${partes[2]} (UTC-5)`;
+      const nuevaFecha = `${partes[0]}/${partes[1]}/${partes[2]} ${partes[3]}:${partes[4]} (UTC-5)`;
       
-      const headerRegex = /\/\*{40}[\s\S]*?\*{40}\//;
-      const nuevoHeader = `/******************************************
+      let headerRegex, nuevoHeader;
+      
+      if (headerActual.tipo === 'html') {
+        // Header para HTML
+        headerRegex = /<!--\s*\*+[\s\S]*?\*+\s*-->/;
+        nuevoHeader = `<!--
+*****************************************
 PROYECTO: ${headerActual.proyecto}
 ARCHIVO: ${headerActual.archivo}
 VERSIÓN: ${nuevaVersion}
 FECHA: ${nuevaFecha}
-******************************************/`;
+*****************************************
+-->`;
+      } else {
+        // Header para GS
+        headerRegex = /\/\*\s*\*+[\s\S]*?\*+\s*\*\//;
+        nuevoHeader = `/*
+*****************************************
+PROYECTO: ${headerActual.proyecto}
+ARCHIVO: ${headerActual.archivo}
+VERSIÓN: ${nuevaVersion}
+FECHA: ${nuevaFecha}
+*****************************************
+*/`;
+      }
       
       const codigoActualizado = codigo.replace(headerRegex, nuevoHeader);
-      
       Logger.log('✅ Versión actualizada: ' + headerActual.version + ' → ' + nuevaVersion);
       return codigoActualizado;
     }
@@ -237,9 +351,9 @@ FECHA: ${nuevaFecha}
     return codigo;
   }
 }
-// MOD-008: FIN
+// MOD-010: FIN
 
-// MOD-009: OBTENER URL DE TESTS [INICIO]
+// MOD-011: OBTENER URL DE TESTS [INICIO]
 function obtenerURLTests() {
   try {
     const url = ScriptApp.getService().getUrl();
@@ -254,82 +368,78 @@ function obtenerURLTests() {
     return null;
   }
 }
-// MOD-009: FIN
+// MOD-011: FIN
 
-// MOD-010: OBTENER ESTÁNDAR DESDE GOOGLE DOC [INICIO]
+// MOD-012: OBTENER ESTÁNDAR DESDE GOOGLE DOC [INICIO]
 function obtenerEstandar() {
   try {
     const docId = '1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA';
-    
-    // Verificar acceso al documento
-    let doc;
-    try {
-      doc = DocumentApp.openById(docId);
-    } catch (accessError) {
-      Logger.log('❌ Error de acceso al documento: ' + accessError.message);
-      return { 
-        success: false, 
-        error: 'No puedo acceder al documento. Verifica que esté compartido como "Cualquiera con el enlace - Lector"' 
-      };
-    }
-    
-    // Obtener contenido
-    const body = doc.getBody();
-    if (!body) {
-      Logger.log('❌ El documento no tiene cuerpo');
-      return { success: false, error: 'El documento no tiene contenido' };
-    }
-    
-    const texto = body.getText();
+    const doc = DocumentApp.openById(docId);
+    const texto = doc.getBody().getText();
     
     if (!texto || texto.trim() === '') {
-      Logger.log('⚠️ El documento está vacío');
       return { success: false, error: 'El documento está vacío' };
     }
     
     Logger.log('✅ Estándar obtenido desde Google Doc (' + texto.length + ' caracteres)');
-    Logger.log('📄 Documento: ' + doc.getName());
-    
     return { success: true, texto: texto };
     
   } catch (error) {
-    Logger.log('❌ Error inesperado en obtenerEstandar: ' + error.message);
-    Logger.log('Stack trace: ' + error.stack);
-    return { 
-      success: false, 
-      error: 'Error al leer el documento: ' + error.message 
-    };
+    Logger.log('❌ Error al obtener estándar: ' + error.message);
+    return { success: false, error: 'No se pudo leer el documento. Verifica los permisos.' };
   }
 }
-// MOD-010: FIN
+// MOD-012: FIN
 
-// MOD-011: NOTAS [INICIO]
+// MOD-013: CÓDIGO DE CIERRE [INICIO]
+// Sistema iniciado
+Logger.log('✅ CodeWorkShop Backend v01.07 cargado');
+Logger.log('📋 Soporta archivos .GS y .HTML (CodeWorkshop v2.2)');
+// MOD-013: FIN
+
+// MOD-014: NOTAS [INICIO]
 /*
 DESCRIPCIÓN:
 Backend principal de CodeWorkShop para parseo, validación y reemplazo
-de módulos en código modular. Ahora integrado con Google Docs para el estándar.
+de módulos en código modular. Ahora soporta AMBOS formatos según 
+estándar CodeWorkshop v2.2:
+- Archivos .GS: usa // para comentarios
+- Archivos .HTML: usa <!-- --> para comentarios
+
+CAMBIOS EN v01.07 (CRÍTICO):
+- MOD-005: Nueva función detectarTipoArchivo() para identificar .GS vs .HTML
+- MOD-006: parsearModulos() ahora detecta automáticamente el tipo y usa regex apropiada
+- MOD-007: extraerHeader() soporta headers en ambos formatos
+- MOD-008: validarModulo() valida según el tipo de archivo
+- MOD-009: reemplazarModulo() usa regex correcta según tipo detectado
+- MOD-010: actualizarVersion() genera headers en formato correcto
+- Código cumple con estándar v2.2 (este archivo usa formato .GS)
 
 DEPENDENCIAS:
-- MOD-002: Requiere archivos HTML (index, style, scripts, testweb)
-- MOD-004: Usa regex para detectar formato MOD-XXX
-- MOD-007: Llama a MOD-004, MOD-005, MOD-006 y MOD-008
-- MOD-010: Requiere acceso a Google Docs API
+- MOD-003: Requiere archivos HTML (index, style, scripts, testweb)
+- MOD-005: Clave para detectar tipo de archivo automáticamente
+- MOD-006: Usa MOD-005 para seleccionar regex correcta
+- MOD-009: Usa MOD-005, MOD-006, MOD-007, MOD-008 y MOD-010
+- MOD-012: Requiere acceso a Google Docs API
 
 ADVERTENCIAS:
-- MOD-001: Debe ejecutarse manualmente antes del primer deploy
-- MOD-005: El formato de header es simple (sin marco decorativo)
-- MOD-008: Solo funciona con versiones formato XX.YY (dos secciones)
-- MOD-010: Requiere que el documento esté compartido correctamente
+- MOD-002: Debe ejecutarse manualmente antes del primer deploy
+- MOD-005: La detección de tipo se basa en patrones de comentarios MOD-XXX
+- MOD-006: Si no detecta módulos, verifica que usen el formato correcto
+- MOD-010: Solo funciona con versiones formato XX.YY (dos secciones)
+- MOD-012: Requiere que el documento esté compartido correctamente
 
-CAMBIOS RECIENTES:
-- v01.06: Integración con Google Doc para el estándar
-- v01.06: Eliminado standard.html
-- v01.06: Agregado MOD-010 para leer Google Doc
-- v01.02: Nuevo formato de header simplificado
+EJEMPLOS DE USO:
+// Para archivo .GS
+parsearModulos(codigoGS); // Detecta automáticamente y usa // regex
+
+// Para archivo .HTML  
+parsearModulos(codigoHTML); // Detecta automáticamente y usa <!-- --> regex
 
 PRÓXIMAS MEJORAS:
 - Implementar validación de tabulación en módulos
 - Agregar detección automática de módulo de NOTAS
 - Cache del estándar para reducir llamadas a Google Docs
+- Soporte para archivos mixtos (edge cases complejos)
 */
-// MOD-011: FIN
+// MOD-014: FIN
