@@ -1,0 +1,1507 @@
+// MOD-001: ENCABEZADO [INICIO]
+/*
+*****************************************
+PROYECTO: CodeWorkShop
+ARCHIVO: code.gs
+VERSIÓN: 01.08
+FECHA: 13/01/2026 11:50 (UTC-5)
+*****************************************
+*/
+// MOD-001: FIN
+
+// MOD-002: FORZAR PERMISOS [INICIO]
+/**
+ * Esta función DEBE ejecutarse manualmente una vez desde el editor
+ * antes de desplegar la webapp para activar el flujo de autorización
+ */
+function forzarPermisos() {
+  try {
+    DriveApp.getRootFolder().getName();
+    Logger.log('✅ Permiso Drive autorizado');
+  } catch (e) {
+    Logger.log('❌ Esperando autorización de Drive: ' + e);
+    throw new Error('Autoriza Drive y vuelve a ejecutar');
+  }
+  
+  try {
+    SpreadsheetApp.getActiveSpreadsheet();
+    Logger.log('✅ Permiso Spreadsheet autorizado');
+  } catch (e) {
+    Logger.log('⚠️ Spreadsheet no disponible (normal si no hay hoja activa)');
+  }
+  
+  try {
+    ScriptApp.getService().getUrl();
+    Logger.log('✅ ScriptApp disponible');
+  } catch (e) {
+    Logger.log('❌ Error con ScriptApp: ' + e);
+  }
+  
+  try {
+    DocumentApp.openById('1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA');
+    Logger.log('✅ Permiso DocumentApp autorizado');
+  } catch (e) {
+    Logger.log('❌ Esperando autorización de DocumentApp: ' + e);
+    throw new Error('Autoriza DocumentApp y vuelve a ejecutar');
+  }
+  
+  Logger.log('✅ Permisos verificados. Ahora puedes desplegar la webapp.');
+  return '✅ Permisos verificados correctamente';
+}
+// MOD-002: FIN
+
+// MOD-003: SERVIR HTML [INICIO]
+function doGet(e) {
+  const page = e.parameter.page || 'index';
+  
+  if (page === 'test') {
+    return HtmlService.createHtmlOutputFromFile('testweb')
+      .setTitle('CodeWorkShop - Tests')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+  
+  return HtmlService.createTemplateFromFile('index')
+    .evaluate()
+    .setTitle('CodeWorkShop')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+// MOD-003: FIN
+
+// MOD-004: INCLUIR ARCHIVOS HTML [INICIO]
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+// MOD-004: FIN
+
+// MOD-005: DETECTAR TIPO DE ARCHIVO [INICIO]
+/**
+ * Detecta si el código es .GS o .HTML basándose en su contenido
+ * @param {string} codigo - El código completo a analizar
+ * @return {string} 'gs' o 'html'
+ */
+function detectarTipoArchivo(codigo) {
+  // Si contiene comentarios HTML de módulo, es HTML
+  if (/<!--\s*MOD-\d{3}:/i.test(codigo)) {
+    return 'html';
+  }
+  
+  // Si contiene comentarios JS de módulo, es GS
+  if (/\/\/\s*MOD-\d{3}:/i.test(codigo)) {
+    return 'gs';
+  }
+  
+  // Fallback: detectar por tags HTML
+  if (/<html|<script|<style|<!DOCTYPE/i.test(codigo)) {
+    return 'html';
+  }
+  
+  // Por defecto, asumimos GS
+  return 'gs';
+}
+// MOD-005: FIN
+
+// MOD-006: PARSEAR MÓDULOS [INICIO]
+/**
+ * Parsea módulos del código detectando automáticamente el tipo de archivo
+ * Soporta archivos .GS (// comentarios) y .HTML (<!-- comentarios -->)
+ */
+function parsearModulos(codigoCompleto) {
+  try {
+    if (!codigoCompleto || codigoCompleto.trim() === '') {
+      return { success: false, error: 'Código vacío' };
+    }
+    
+    const tipoArchivo = detectarTipoArchivo(codigoCompleto);
+    Logger.log('📄 Tipo de archivo detectado: ' + tipoArchivo.toUpperCase());
+    
+    let modulosRegex;
+    
+    if (tipoArchivo === 'html') {
+      // Regex para archivos HTML: <!-- MOD-XXX: ... [INICIO] --> ... <!-- MOD-XXX: FIN -->
+      modulosRegex = /<!--\s*MOD-(\d{3}):\s*(.+?)\s*\[INICIO\]\s*-->([\s\S]*?)<!--\s*MOD-\1:\s*FIN\s*-->/g;
+    } else {
+      // Regex para archivos GS: // MOD-XXX: ... [INICIO] ... // MOD-XXX: FIN
+      modulosRegex = /\/\/\s*MOD-(\d{3}):\s*(.+?)\s*\[INICIO\]([\s\S]*?)\/\/\s*MOD-\1:\s*FIN/g;
+    }
+    
+    const modulos = [];
+    let match;
+    
+    while ((match = modulosRegex.exec(codigoCompleto)) !== null) {
+      modulos.push({
+        numero: match[1],
+        descripcion: match[2].trim(),
+        codigo: match[0],
+        inicio: match.index,
+        fin: match.index + match[0].length,
+        tipo: tipoArchivo
+      });
+    }
+    
+    if (modulos.length === 0) {
+      return { success: false, error: 'No se detectaron módulos válidos' };
+    }
+    
+    Logger.log('✅ Módulos parseados: ' + modulos.length + ' (tipo: ' + tipoArchivo + ')');
+    return { success: true, modulos: modulos, tipo: tipoArchivo };
+    
+  } catch (error) {
+    Logger.log('❌ Error en parsearModulos: ' + error.message);
+    return { success: false, error: error.message };
+  }
+}
+// MOD-006: FIN
+
+// MOD-007: EXTRAER HEADER [INICIO]
+/**
+ * Extrae el header del código, soportando ambos formatos (.GS y .HTML)
+ */
+function extraerHeader(codigoCompleto) {
+  try {
+    const tipoArchivo = detectarTipoArchivo(codigoCompleto);
+    
+    let headerRegex;
+    
+    if (tipoArchivo === 'html') {
+      // Header en HTML: <!-- ... -->
+      headerRegex = /<!--\s*\*+\s*PROYECTO:\s*(.+?)\s*ARCHIVO:\s*(.+?)\s*VERSIÓN:\s*(.+?)\s*FECHA:\s*(.+?)\s*\*+\s*-->/s;
+    } else {
+      // Header en GS: /* ... */
+      headerRegex = /\/\*\s*\*+\s*PROYECTO:\s*(.+?)\s*ARCHIVO:\s*(.+?)\s*VERSIÓN:\s*(.+?)\s*FECHA:\s*(.+?)\s*\*+\s*\*\//s;
+    }
+    
+    const match = codigoCompleto.match(headerRegex);
+    
+    if (!match) {
+      return { success: false, error: 'Header no encontrado' };
+    }
+    
+    const header = {
+      proyecto: match[1].trim(),
+      archivo: match[2].trim(),
+      version: match[3].trim(),
+      fecha: match[4].trim(),
+      tipo: tipoArchivo
+    };
+    
+    Logger.log('✅ Header extraído: ' + header.proyecto + ' (tipo: ' + tipoArchivo + ')');
+    return { success: true, header: header };
+    
+  } catch (error) {
+    Logger.log('❌ Error en extraerHeader: ' + error.message);
+    return { success: false, error: error.message };
+  }
+}
+// MOD-007: FIN
+
+// MOD-008: VALIDAR MÓDULO [INICIO]
+/**
+ * Valida que un módulo tenga el formato correcto según su tipo
+ */
+function validarModulo(codigoModulo, numeroEsperado) {
+  try {
+    const tipoArchivo = detectarTipoArchivo(codigoModulo);
+    
+    let inicioRegex, finRegex;
+    
+    if (tipoArchivo === 'html') {
+      // Validación para HTML
+      inicioRegex = new RegExp(`<!--\\s*MOD-${numeroEsperado}:\\s*.+?\\s*\\[INICIO\\]\\s*-->`);
+      finRegex = new RegExp(`<!--\\s*MOD-${numeroEsperado}:\\s*FIN\\s*-->`);
+    } else {
+      // Validación para GS
+      inicioRegex = new RegExp(`\\/\\/\\s*MOD-${numeroEsperado}:\\s*.+?\\s*\\[INICIO\\]`);
+      finRegex = new RegExp(`\\/\\/\\s*MOD-${numeroEsperado}:\\s*FIN`);
+    }
+    
+    if (!inicioRegex.test(codigoModulo)) {
+      return { success: false, error: `Falta [INICIO] en MOD-${numeroEsperado}` };
+    }
+    
+    if (!finRegex.test(codigoModulo)) {
+      return { success: false, error: `Falta FIN en MOD-${numeroEsperado}` };
+    }
+    
+    return { success: true };
+    
+  } catch (error) {
+    Logger.log('❌ Error en validarModulo: ' + error.message);
+    return { success: false, error: error.message };
+  }
+}
+// MOD-008: FIN
+
+// MOD-009: REEMPLAZAR MÓDULO [INICIO]
+/**
+ * Reemplaza un módulo específico en el código
+ * Detecta automáticamente el tipo de archivo y usa el formato correcto
+ */
+function reemplazarModulo(codigoCompleto, numeroModulo, nuevoCodigoModulo) {
+  try {
+    if (!codigoCompleto || !numeroModulo || !nuevoCodigoModulo) {
+      return { success: false, error: 'Parámetros incompletos' };
+    }
+    
+    const validacion = validarModulo(nuevoCodigoModulo, numeroModulo);
+    if (!validacion.success) {
+      return validacion;
+    }
+    
+    const tipoArchivo = detectarTipoArchivo(codigoCompleto);
+    let moduloRegex;
+    
+    if (tipoArchivo === 'html') {
+      // Regex para HTML
+      moduloRegex = new RegExp(
+        `<!--\\s*MOD-${numeroModulo}:\\s*.+?\\s*\\[INICIO\\]\\s*-->[\\s\\S]*?<!--\\s*MOD-${numeroModulo}:\\s*FIN\\s*-->`,
+        'g'
+      );
+    } else {
+      // Regex para GS
+      moduloRegex = new RegExp(
+        `\\/\\/\\s*MOD-${numeroModulo}:\\s*.+?\\s*\\[INICIO\\][\\s\\S]*?\\/\\/\\s*MOD-${numeroModulo}:\\s*FIN`,
+        'g'
+      );
+    }
+    
+    if (!moduloRegex.test(codigoCompleto)) {
+      return { success: false, error: `Módulo MOD-${numeroModulo} no encontrado en el código original` };
+    }
+    
+    const codigoActualizado = codigoCompleto.replace(moduloRegex, nuevoCodigoModulo.trim());
+    
+    const headerResult = extraerHeader(codigoCompleto);
+    if (headerResult.success) {
+      const codigoConVersionActualizada = actualizarVersion(codigoActualizado, headerResult.header);
+      Logger.log('✅ Módulo MOD-' + numeroModulo + ' reemplazado exitosamente');
+      return { success: true, codigo: codigoConVersionActualizada };
+    }
+    
+    Logger.log('✅ Módulo MOD-' + numeroModulo + ' reemplazado (sin actualizar versión)');
+    return { success: true, codigo: codigoActualizado };
+    
+  } catch (error) {
+    Logger.log('❌ Error en reemplazarModulo: ' + error.message);
+    return { success: false, error: error.message };
+  }
+}
+// MOD-009: FIN
+
+// MOD-010: ACTUALIZAR VERSIÓN [INICIO]
+/**
+ * Actualiza automáticamente la versión y fecha en el header
+ * Soporta ambos formatos (.GS y .HTML)
+ */
+function actualizarVersion(codigo, headerActual) {
+  try {
+    const versionParts = headerActual.version.split('.');
+    if (versionParts.length === 2) {
+      versionParts[1] = String(parseInt(versionParts[1]) + 1).padStart(2, '0');
+      const nuevaVersion = versionParts.join('.');
+      
+      const ahora = new Date();
+      const opciones = {
+        timeZone: 'America/Lima',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      };
+      
+      const partes = ahora.toLocaleString('es-PE', opciones).split(/[\s,\/]+/);
+      const nuevaFecha = `${partes[0]}/${partes[1]}/${partes[2]} ${partes[3]}:${partes[4]} (UTC-5)`;
+      
+      let headerRegex, nuevoHeader;
+      
+      if (headerActual.tipo === 'html') {
+        // Header para HTML
+        headerRegex = /<!--\s*\*+[\s\S]*?\*+\s*-->/;
+        nuevoHeader = `<!--
+*****************************************
+PROYECTO: ${headerActual.proyecto}
+ARCHIVO: ${headerActual.archivo}
+VERSIÓN: ${nuevaVersion}
+FECHA: ${nuevaFecha}
+*****************************************
+-->`;
+      } else {
+        // Header para GS
+        headerRegex = /\/\*\s*\*+[\s\S]*?\*+\s*\*\//;
+        nuevoHeader = `/*
+*****************************************
+PROYECTO: ${headerActual.proyecto}
+ARCHIVO: ${headerActual.archivo}
+VERSIÓN: ${nuevaVersion}
+FECHA: ${nuevaFecha}
+*****************************************
+*/`;
+      }
+      
+      const codigoActualizado = codigo.replace(headerRegex, nuevoHeader);
+      Logger.log('✅ Versión actualizada: ' + headerActual.version + ' → ' + nuevaVersion);
+      return codigoActualizado;
+    }
+    
+    return codigo;
+    
+  } catch (error) {
+    Logger.log('⚠️ No se pudo actualizar versión: ' + error.message);
+    return codigo;
+  }
+}
+// MOD-010: FIN
+
+// MOD-011: OBTENER URL DE TESTS [INICIO]
+function obtenerURLTests() {
+  try {
+    const url = ScriptApp.getService().getUrl();
+    if (url) {
+      Logger.log('✅ URL obtenida: ' + url);
+      return url + '?page=test';
+    }
+    Logger.log('❌ ScriptApp.getService().getUrl() devolvió null');
+    return null;
+  } catch (error) {
+    Logger.log('❌ Error al obtener URL: ' + error.message);
+    return null;
+  }
+}
+// MOD-011: FIN
+
+// MOD-012: OBTENER ESTÁNDAR DESDE GOOGLE DOC [INICIO]
+function obtenerEstandar() {
+  try {
+    const docId = '1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA';
+    const doc = DocumentApp.openById(docId);
+    const texto = doc.getBody().getText();
+    
+    if (!texto || texto.trim() === '') {
+      return { success: false, error: 'El documento está vacío' };
+    }
+    
+    Logger.log('✅ Estándar obtenido desde Google Doc (' + texto.length + ' caracteres)');
+    return { success: true, texto: texto };
+    
+  } catch (error) {
+    Logger.log('❌ Error al obtener estándar: ' + error.message);
+    return { success: false, error: 'No se pudo leer el documento. Verifica los permisos.' };
+  }
+}
+// MOD-012: FIN
+
+// MOD-013: CÓDIGO DE CIERRE [INICIO]
+// Sistema iniciado
+Logger.log('✅ CodeWorkShop Backend v01.07 cargado');
+Logger.log('📋 Soporta archivos .GS y .HTML (CodeWorkshop v2.2)');
+// MOD-013: FIN
+
+// MOD-014: NOTAS [INICIO]
+/*
+DESCRIPCIÓN:
+Backend principal de CodeWorkShop para parseo, validación y reemplazo
+de módulos en código modular. Ahora soporta AMBOS formatos según 
+estándar CodeWorkshop v2.2:
+- Archivos .GS: usa // para comentarios
+- Archivos .HTML: usa <!-- --> para comentarios
+
+CAMBIOS EN v01.07 (CRÍTICO):
+- MOD-005: Nueva función detectarTipoArchivo() para identificar .GS vs .HTML
+- MOD-006: parsearModulos() ahora detecta automáticamente el tipo y usa regex apropiada
+- MOD-007: extraerHeader() soporta headers en ambos formatos
+- MOD-008: validarModulo() valida según el tipo de archivo
+- MOD-009: reemplazarModulo() usa regex correcta según tipo detectado
+- MOD-010: actualizarVersion() genera headers en formato correcto
+- Código cumple con estándar v2.2 (este archivo usa formato .GS)
+
+DEPENDENCIAS:
+- MOD-003: Requiere archivos HTML (index, style, scripts, testweb)
+- MOD-005: Clave para detectar tipo de archivo automáticamente
+- MOD-006: Usa MOD-005 para seleccionar regex correcta
+- MOD-009: Usa MOD-005, MOD-006, MOD-007, MOD-008 y MOD-010
+- MOD-012: Requiere acceso a Google Docs API
+
+ADVERTENCIAS:
+- MOD-002: Debe ejecutarse manualmente antes del primer deploy
+- MOD-005: La detección de tipo se basa en patrones de comentarios MOD-XXX
+- MOD-006: Si no detecta módulos, verifica que usen el formato correcto
+- MOD-010: Solo funciona con versiones formato XX.YY (dos secciones)
+- MOD-012: Requiere que el documento esté compartido correctamente
+
+EJEMPLOS DE USO:
+// Para archivo .GS
+parsearModulos(codigoGS); // Detecta automáticamente y usa // regex
+
+// Para archivo .HTML  
+parsearModulos(codigoHTML); // Detecta automáticamente y usa <!-- --> regex
+
+PRÓXIMAS MEJORAS:
+- Implementar validación de tabulación en módulos
+- Agregar detección automática de módulo de NOTAS
+- Cache del estándar para reducir llamadas a Google Docs
+- Soporte para archivos mixtos (edge cases complejos)
+*/
+// MOD-014: FIN
+
+<!-- MOD-001: ENCABEZADO [INICIO] -->
+<!--
+******************************************
+PROYECTO: CodeWorkShop
+ARCHIVO: index.html
+VERSIÓN: 01.07
+FECHA: 10/01/2026 15:50 (UTC-5)
+******************************************
+-->
+<!-- MOD-001: FIN -->
+
+<!-- MOD-002: APERTURA HTML [INICIO] -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeWorkShop</title>
+  <?!= include('style'); ?>
+</head>
+<body>
+<!-- MOD-002: FIN -->
+
+<!-- MOD-003: CONTAINER PRINCIPAL [INICIO] -->
+<div class="container">
+<!-- MOD-003: FIN -->
+  
+<!-- MOD-004: HEADER [INICIO] -->
+<div class="main-header">
+  <div class="header-content">
+    <h1>🔧 CodeWorkShop</h1>
+    <p class="subtitle">Modificación modular y quirúrgica de código</p>
+  </div>
+  <div class="header-actions">
+    <button class="btn-secondary" onclick="copiarInstruccionesIA()" 
+            title="Copia el estándar CodeWorkShop para entrenar IAs">
+      📋 Copiar Estándar
+    </button>
+    <button class="btn-secondary" onclick="abrirTests()"
+            title="Ir a la página de tests">
+      🧪 Tests
+    </button>
+  </div>
+</div>
+<!-- MOD-004: FIN -->
+  
+<!-- MOD-005: SECCIÓN CARGA DE CÓDIGO [INICIO] -->
+<div class="section">
+  <h2>1. Cargar Código Original</h2>
+  <textarea id="codigoOriginal" 
+            class="code-area" 
+            placeholder="Pega aquí tu código con módulos MOD-XXX..."></textarea>
+  <button class="btn-primary" onclick="analizarModulos()">
+    🔍 Analizar Módulos
+  </button>
+</div>
+<!-- MOD-005: FIN -->
+  
+<!-- MOD-006: SECCIÓN LISTA DE MÓDULOS [INICIO] -->
+<div class="section" id="seccionModulos" style="display:none;">
+  <h2>2. Seleccionar Módulo a Modificar</h2>
+  <div id="listaModulos" class="modulo-list"></div>
+</div>
+<!-- MOD-006: FIN -->
+  
+<!-- MOD-007: SECCIÓN CÓDIGO ACTUAL [INICIO] -->
+<div class="section" id="seccionModuloActual" style="display:none;">
+  <h2>3. Código Actual del Módulo</h2>
+  <textarea id="moduloActual" 
+            class="code-area" 
+            readonly></textarea>
+</div>
+<!-- MOD-007: FIN -->
+  
+<!-- MOD-008: SECCIÓN NUEVO CÓDIGO [INICIO] -->
+<div class="section" id="seccionNuevoModulo" style="display:none;">
+  <h2>4. Nuevo Código del Módulo</h2>
+  <textarea id="nuevoModulo" 
+            class="code-area" 
+            placeholder="Pega aquí el nuevo código del módulo MOD-XXX..."></textarea>
+  <button class="btn-primary" onclick="aplicarCambio()">
+    ✅ Aplicar Cambio
+  </button>
+</div>
+<!-- MOD-008: FIN -->
+  
+<!-- MOD-009: SECCIÓN RESULTADO [INICIO] -->
+<div class="section" id="seccionResultado" style="display:none;">
+  <h2>5. Código Resultante</h2>
+  <textarea id="codigoResultante" 
+            class="code-area" 
+            readonly></textarea>
+  <button class="btn-secondary" onclick="copiarResultado()">
+    📋 Copiar Código
+  </button>
+  <button class="btn-secondary" onclick="reiniciar()">
+    🔄 Nueva Modificación
+  </button>
+</div>
+<!-- MOD-009: FIN -->
+  
+<!-- MOD-010: NOTIFICACIONES Y LOADING [INICIO] -->
+<div id="toast" class="toast"></div>
+<div id="loading" class="loading-overlay">
+  <div class="spinner"></div>
+  <p>Procesando...</p>
+</div>
+<!-- MOD-010: FIN -->
+
+<!-- MOD-011: CIERRE CONTAINER [INICIO] -->
+</div>
+<!-- MOD-011: FIN -->
+  
+<!-- MOD-012: CÓDIGO DE CIERRE [INICIO] -->
+  <?!= include('scripts'); ?>
+</body>
+</html>
+<!-- MOD-012: FIN -->
+
+<!-- MOD-013: NOTAS [INICIO] -->
+<!--
+DESCRIPCIÓN:
+Página principal de CodeWorkShop para modificación modular de código.
+Permite cargar código, analizar módulos, seleccionar y reemplazar módulos
+específicos de forma quirúrgica sin afectar el resto del archivo.
+
+CAMBIOS EN v01.07 (CRÍTICO):
+- Cumple con estándar CodeWorkshop v2.2 para archivos HTML
+- TODOS los comentarios usan sintaxis HTML: 
+- MOD-003: Container principal separado en su propio módulo
+- MOD-011: Cierre del container en módulo separado
+- MOD-012: Código de cierre con includes agregado
+- MOD-013: Módulo de NOTAS agregado
+- Sin comentarios // en ninguna parte del archivo
+- Compatible con detección de tipo de archivo (GS/HTML) del backend v01.07
+
+DEPENDENCIAS:
+- MOD-002: Requiere archivos style.html y scripts.html vía include()
+- MOD-004: Botón "Copiar Estándar" llama a copiarInstruccionesIA() de scripts.html
+  que obtiene el estándar desde Google Doc (code.gs MOD-012)
+- MOD-004: Botón "Tests" llama a abrirTests() de scripts.html
+- MOD-005: analizarModulos() de scripts.html llama a parsearModulos() del backend
+  que ahora detecta automáticamente el tipo de archivo (GS/HTML)
+- MOD-006: listaModulos se llena dinámicamente mostrando badges de tipo de archivo
+- MOD-008: aplicarCambio() llama a reemplazarModulo() del backend
+- MOD-010: Elementos de UI (toast, loading) controlados por scripts.html
+- Backend code.gs v01.07: Requiere funciones con detección automática de tipo
+
+ADVERTENCIAS:
+- El análisis de módulos requiere código con formato MOD-XXX correcto
+- El backend ahora detecta automáticamente si es .GS o .HTML
+- Las secciones se muestran/ocultan dinámicamente vía JavaScript
+- Los textareas readonly no permiten edición manual
+- El loading overlay cubre toda la pantalla cuando está activo
+- El estándar se obtiene desde Google Doc, no desde archivo local
+
+ESTRUCTURA DE MÓDULOS:
+- MOD-001: Encabezado con metadata del archivo
+- MOD-002: Apertura HTML con head y body
+- MOD-003: Apertura del container principal
+- MOD-004: Header con título y botones de acción
+- MOD-005 a MOD-009: Secciones del flujo de trabajo
+- MOD-010: Elementos de notificaciones y loading
+- MOD-011: Cierre del container principal
+- MOD-012: Código de cierre con includes y tags HTML
+- MOD-013: Notas y documentación (este módulo)
+
+FLUJO DE TRABAJO:
+1. Usuario carga código en MOD-005
+2. analizarModulos() envía código al backend
+3. Backend detecta tipo (GS/HTML) y parsea módulos
+4. Sistema muestra módulos con badge de tipo en MOD-006
+5. Usuario selecciona módulo, se muestra en MOD-007
+6. Usuario pega nuevo código en MOD-008
+7. aplicarCambio() valida y envía al backend
+8. Backend reemplaza módulo y actualiza versión
+9. Sistema muestra resultado en MOD-009
+
+INTEGRACIÓN CON BACKEND v01.07:
+- parsearModulos(): Recibe propiedad 'tipo' en cada módulo ('gs' o 'html')
+- Badges visuales muestran tipo de archivo de cada módulo
+- Mensajes de éxito incluyen información del tipo detectado
+- Compatible con ambos formatos de comentarios (// para GS,  para HTML)
+
+PRÓXIMAS MEJORAS:
+- Agregar preview visual de cambios antes de aplicar
+- Implementar validación de sintaxis en el cliente según tipo detectado
+- Agregar soporte para deshacer/rehacer cambios
+- Mejorar visualización de diferencias entre versiones
+- Cache del estándar para reducir llamadas a Google Docs
+-->
+<!-- MOD-013: FIN -->
+
+<!-- MOD-001: ENCABEZADO [INICIO] -->
+<!--
+*****************************************
+PROYECTO: CodeWorkShop
+ARCHIVO: scripts.html
+VERSIÓN: 01.08
+FECHA: 13/01/2026 12:01 (UTC-5)
+*****************************************
+-->
+<!-- MOD-001: FIN -->
+
+<!-- MOD-002: APERTURA SCRIPT [INICIO] -->
+<script>
+<!-- MOD-002: FIN -->
+
+<!-- MOD-003: VARIABLES GLOBALES [INICIO] -->
+<!-- Variables de estado de la aplicación -->
+let codigoOriginal = '';
+let modulosDetectados = [];
+let moduloSeleccionado = null;
+<!-- MOD-003: FIN -->
+
+<!-- MOD-004: COPIAR ESTÁNDAR DESDE GOOGLE DOC [INICIO] -->
+function copiarInstruccionesIA() {
+  mostrarCargando(true);
+  console.log('📋 Obteniendo estándar desde Google Doc...');
+  
+  google.script.run
+    .withSuccessHandler(function(resultado) {
+      mostrarCargando(false);
+      
+      if (!resultado.success) {
+        mostrarNotificacion('❌ ' + resultado.error, 'error');
+        console.error('Error al obtener estándar:', resultado.error);
+        return;
+      }
+      
+      copiarTexto(resultado.texto);
+      console.log('✅ Estándar obtenido correctamente');
+    })
+    .withFailureHandler(function(error) {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error de conexión', 'error');
+      console.error('Error fatal al obtener estándar:', error);
+    })
+    .obtenerEstandar();
+}
+
+function copiarTexto(texto) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto)
+      .then(() => {
+        mostrarNotificacion('✅ Estándar CodeWorkShop copiado', 'success');
+        console.log('📋 Estándar copiado al portapapeles');
+      })
+      .catch(() => {
+        copiarTextoFallback(texto);
+      });
+  } else {
+    copiarTextoFallback(texto);
+  }
+}
+
+function copiarTextoFallback(texto) {
+  const textarea = document.createElement('textarea');
+  textarea.value = texto;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  
+  try {
+    const exitoso = document.execCommand('copy');
+    if (exitoso) {
+      mostrarNotificacion('✅ Estándar CodeWorkShop copiado', 'success');
+      console.log('📋 Estándar copiado (fallback)');
+    } else {
+      throw new Error('execCommand falló');
+    }
+  } catch (err) {
+    mostrarNotificacion('❌ No se pudo copiar. Usa Ctrl+C manualmente', 'error');
+    console.error('Error al copiar:', err);
+    mostrarModalEstandar(texto);
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
+function mostrarModalEstandar(texto) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-instrucciones';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3>📋 Estándar CodeWorkShop</h3>
+      <p>Selecciona todo el texto y copia con Ctrl+C:</p>
+      <textarea readonly style="width:100%; height:400px; font-family:monospace;">
+${texto}
+      </textarea>
+      <button onclick="this.closest('.modal-instrucciones').remove()">Cerrar</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+<!-- MOD-004: FIN -->
+
+<!-- MOD-005: COPIAR URL PDF DEL ESTÁNDAR [INICIO] -->
+function copiarUrlPdfEstandar() {
+  const urlPdf = 'https://docs.google.com/document/d/1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA/export?format=pdf';
+  
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(urlPdf)
+      .then(() => {
+        mostrarNotificacion('✅ URL del PDF copiada al portapapeles', 'success');
+        console.log('📄 URL PDF copiada:', urlPdf);
+      })
+      .catch(() => {
+        copiarUrlPdfFallback(urlPdf);
+      });
+  } else {
+    copiarUrlPdfFallback(urlPdf);
+  }
+}
+
+function copiarUrlPdfFallback(urlPdf) {
+  const textarea = document.createElement('textarea');
+  textarea.value = urlPdf;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  
+  try {
+    const exitoso = document.execCommand('copy');
+    if (exitoso) {
+      mostrarNotificacion('✅ URL del PDF copiada al portapapeles', 'success');
+      console.log('📄 URL PDF copiada (fallback):', urlPdf);
+    } else {
+      mostrarNotificacion('❌ No se pudo copiar la URL', 'error');
+    }
+  } catch (err) {
+    mostrarNotificacion('❌ Error al copiar URL', 'error');
+    console.error('Error al copiar URL PDF:', err);
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+<!-- MOD-005: FIN -->
+
+<!-- MOD-006: ANALIZAR MÓDULOS [INICIO] -->
+function analizarModulos() {
+  const codigo = document.getElementById('codigoOriginal').value;
+  
+  if (!codigo.trim()) {
+    mostrarNotificacion('⚠️ Por favor, carga el código primero', 'warning');
+    return;
+  }
+  
+  if (!codigo.includes('MOD-')) {
+    mostrarNotificacion('⚠️ No se detectaron módulos en el código', 'warning');
+    return;
+  }
+  
+  mostrarCargando(true);
+  console.log('📥 Código cargado:', codigo.length, 'caracteres');
+  
+  google.script.run
+    .withSuccessHandler(function(resultado) {
+      mostrarCargando(false);
+      
+      if (!resultado.success) {
+        mostrarNotificacion(resultado.error, 'error');
+        console.error('Error al parsear:', resultado);
+        return;
+      }
+      
+      codigoOriginal = codigo;
+      modulosDetectados = resultado.modulos;
+      mostrarModulos(resultado.modulos);
+      
+      <!-- Mostrar tipo de archivo detectado -->
+      const tipoMensaje = resultado.tipo === 'html' ? 'HTML' : 'GS';
+      mostrarNotificacion('✅ Módulos detectados: ' + resultado.modulos.length + ' (tipo: ' + tipoMensaje + ')', 'success');
+      console.log('🔍 Módulos detectados:', resultado.modulos);
+      console.log('📄 Tipo de archivo:', resultado.tipo);
+    })
+    .withFailureHandler(function(error) {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error de conexión', 'error');
+      console.error('Error fatal:', error);
+    })
+    .parsearModulos(codigo);
+}
+<!-- MOD-006: FIN -->
+
+<!-- MOD-007: MOSTRAR MÓDULOS [INICIO] -->
+function mostrarModulos(modulos) {
+  const lista = document.getElementById('listaModulos');
+  lista.innerHTML = '';
+  
+  modulos.forEach((modulo, index) => {
+    const item = document.createElement('div');
+    item.className = 'modulo-item';
+    item.onclick = () => seleccionarModulo(index);
+    
+    <!-- Agregar badge del tipo de archivo -->
+    const tipoBadge = modulo.tipo === 'html' 
+      ? '<span style="font-size:10px;opacity:0.7;margin-left:8px;">HTML</span>' 
+      : '<span style="font-size:10px;opacity:0.7;margin-left:8px;">GS</span>';
+    
+    item.innerHTML = `
+      <span class="modulo-numero">MOD-${modulo.numero}${tipoBadge}</span>
+      <span class="modulo-descripcion">${modulo.descripcion}</span>
+    `;
+    
+    lista.appendChild(item);
+  });
+  
+  document.getElementById('seccionModulos').style.display = 'block';
+}
+<!-- MOD-007: FIN -->
+
+<!-- MOD-008: SELECCIONAR MÓDULO [INICIO] -->
+function seleccionarModulo(index) {
+  moduloSeleccionado = modulosDetectados[index];
+  
+  document.querySelectorAll('.modulo-item').forEach((item, i) => {
+    if (i === index) {
+      item.classList.add('selected');
+    } else {
+      item.classList.remove('selected');
+    }
+  });
+  
+  document.getElementById('moduloActual').value = moduloSeleccionado.codigo;
+  document.getElementById('seccionModuloActual').style.display = 'block';
+  document.getElementById('seccionNuevoModulo').style.display = 'block';
+  
+  mostrarNotificacion('✅ Módulo MOD-' + moduloSeleccionado.numero + ' seleccionado', 'info');
+  console.log('📌 Módulo seleccionado:', moduloSeleccionado);
+}
+<!-- MOD-008: FIN -->
+
+<!-- MOD-009: APLICAR CAMBIO [INICIO] -->
+function aplicarCambio() {
+  if (!validarAntesDeEnviar()) {
+    return;
+  }
+  
+  const nuevoModulo = document.getElementById('nuevoModulo').value;
+  
+  mostrarCargando(true);
+  console.log('🔄 Aplicando cambio al módulo MOD-' + moduloSeleccionado.numero);
+  
+  google.script.run
+    .withSuccessHandler(function(resultado) {
+      mostrarCargando(false);
+      
+      if (!resultado.success) {
+        mostrarNotificacion(resultado.error, 'error');
+        console.error('Error al reemplazar:', resultado);
+        return;
+      }
+      
+      document.getElementById('codigoResultante').value = resultado.codigo;
+      document.getElementById('seccionResultado').style.display = 'block';
+      mostrarNotificacion('✅ Cambio aplicado correctamente', 'success');
+      console.log('✅ Código actualizado');
+      
+      document.getElementById('codigoResultante').scrollIntoView({ behavior: 'smooth' });
+    })
+    .withFailureHandler(function(error) {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error al aplicar cambio', 'error');
+      console.error('Error fatal:', error);
+    })
+    .reemplazarModulo(codigoOriginal, moduloSeleccionado.numero, nuevoModulo);
+}
+<!-- MOD-009: FIN -->
+
+<!-- MOD-010: VALIDAR ANTES DE ENVIAR [INICIO] -->
+function validarAntesDeEnviar() {
+  if (!codigoOriginal) {
+    mostrarNotificacion('⚠️ Primero carga el código original', 'warning');
+    return false;
+  }
+  
+  if (!moduloSeleccionado) {
+    mostrarNotificacion('⚠️ Selecciona un módulo', 'warning');
+    return false;
+  }
+  
+  const nuevoCodigo = document.getElementById('nuevoModulo').value;
+  if (!nuevoCodigo.trim()) {
+    mostrarNotificacion('⚠️ El nuevo código está vacío', 'warning');
+    return false;
+  }
+  
+  return true;
+}
+<!-- MOD-010: FIN -->
+
+<!-- MOD-011: COPIAR RESULTADO [INICIO] -->
+function copiarResultado() {
+  const codigo = document.getElementById('codigoResultante').value;
+  
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(codigo)
+      .then(() => {
+        mostrarNotificacion('✅ Código copiado al portapapeles', 'success');
+      })
+      .catch(() => {
+        copiarResultadoFallback();
+      });
+  } else {
+    copiarResultadoFallback();
+  }
+}
+
+function copiarResultadoFallback() {
+  const textarea = document.getElementById('codigoResultante');
+  textarea.select();
+  
+  try {
+    document.execCommand('copy');
+    mostrarNotificacion('✅ Código copiado al portapapeles', 'success');
+  } catch (err) {
+    mostrarNotificacion('❌ No se pudo copiar', 'error');
+  }
+}
+<!-- MOD-011: FIN -->
+
+<!-- MOD-012: REINICIAR [INICIO] -->
+function reiniciar() {
+  document.getElementById('codigoOriginal').value = '';
+  document.getElementById('nuevoModulo').value = '';
+  document.getElementById('codigoResultante').value = '';
+  
+  document.getElementById('seccionModulos').style.display = 'none';
+  document.getElementById('seccionModuloActual').style.display = 'none';
+  document.getElementById('seccionNuevoModulo').style.display = 'none';
+  document.getElementById('seccionResultado').style.display = 'none';
+  
+  codigoOriginal = '';
+  modulosDetectados = [];
+  moduloSeleccionado = null;
+  
+  mostrarNotificacion('🔄 Listo para nueva modificación', 'info');
+  console.log('🔄 Aplicación reiniciada');
+}
+<!-- MOD-012: FIN -->
+
+<!-- MOD-013: NOTIFICACIONES [INICIO] -->
+function mostrarNotificacion(mensaje, tipo = 'success') {
+  const toast = document.getElementById('toast');
+  const iconos = {
+    success: '✅',
+    error: '❌',
+    warning: '⚠️',
+    info: 'ℹ️'
+  };
+  
+  toast.innerHTML = `${iconos[tipo]} ${mensaje}`;
+  toast.className = `toast ${tipo} show`;
+  
+  setTimeout(() => {
+    toast.className = 'toast';
+  }, 3000);
+}
+<!-- MOD-013: FIN -->
+
+<!-- MOD-014: LOADING OVERLAY [INICIO] -->
+function mostrarCargando(mostrar) {
+  const loading = document.getElementById('loading');
+  if (mostrar) {
+    loading.classList.add('show');
+  } else {
+    loading.classList.remove('show');
+  }
+}
+<!-- MOD-014: FIN -->
+
+<!-- MOD-015: ABRIR PÁGINA DE TESTS [INICIO] -->
+function abrirTests() {
+  google.script.run
+    .withSuccessHandler(function(url) {
+      if (url) {
+        window.open(url, '_blank');
+        console.log('🧪 Abriendo tests en:', url);
+      } else {
+        mostrarNotificacion('❌ No se pudo obtener la URL', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      mostrarNotificacion('❌ Error: ' + error.message, 'error');
+      console.error('Error al abrir tests:', error);
+    })
+    .obtenerURLTests();
+}
+<!-- MOD-015: FIN -->
+
+<!-- MOD-016: CÓDIGO DE CIERRE [INICIO] -->
+<!-- Inicialización completada -->
+console.log('✅ Scripts de CodeWorkShop cargados');
+console.log('📋 Soporta archivos .GS y .HTML (CodeWorkshop v2.2)');
+<!-- MOD-016: FIN -->
+
+<!-- MOD-017: CIERRE SCRIPT [INICIO] -->
+</script>
+<!-- MOD-017: FIN -->
+
+<!-- MOD-018: NOTAS [INICIO] -->
+<!--
+DESCRIPCIÓN:
+Scripts frontend de CodeWorkShop para la interfaz de usuario.
+Maneja la interacción con el backend, visualización de módulos,
+y gestión del flujo de trabajo de modificación modular.
+
+CAMBIOS REALIZADOS:
+- MOD-005: Nuevo botón para copiar URL
+
+DEPENDENCIAS: (pendiente anotar dependencias entre módulos con otras funciones o módulos de otros archivos)
+
+ADVERTENCIAS: (anotar si se requiere)
+
+ESTRUCTURA DE MÓDULOS: (pendiente anotar resumen de lista)
+
+-->
+<!-- MOD-018: FIN -->
+
+<!-- MOD-001: ENCABEZADO [INICIO] -->
+<!--
+*****************************************
+PROYECTO: CodeWorkShop
+ARCHIVO: style.html
+VERSIÓN: 01.07
+FECHA: 10/01/2026 16:00 (UTC-5)
+*****************************************
+-->
+<!-- MOD-001: FIN -->
+
+<!-- MOD-002: APERTURA STYLE [INICIO] -->
+<style>
+/* Variables de color - GitHub Dark */
+:root {
+  /* Fondos */
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  
+  /* Bordes */
+  --border-primary: #30363d;
+  --border-secondary: #21262d;
+  
+  /* Textos */
+  --text-primary: #c9d1d9;
+  --text-secondary: #8b949e;
+  --text-tertiary: #6e7681;
+  
+  /* Acentos */
+  --accent-blue: #58a6ff;
+  --accent-green: #238636;
+  --accent-green-hover: #2ea043;
+  --accent-green-pressed: #1f6f2c;
+  --accent-red: #da3633;
+  --accent-yellow: #d29922;
+  
+  /* Estados */
+  --success: #238636;
+  --error: #da3633;
+  --warning: #d29922;
+  --info: #1f6feb;
+}
+
+/* Reset y base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  padding: 0;
+  margin: 0;
+}
+
+/* Container principal */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Header */
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-primary);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.header-content h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Secciones */
+.section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.section h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+/* Área de código */
+.code-area {
+  width: 100%;
+  height: calc(100vh - 250px);
+  min-height: 200px;
+  max-height: 600px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.code-area:focus {
+  border-color: var(--accent-blue);
+}
+
+.code-area::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Botones */
+button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.btn-primary {
+  background: var(--accent-green);
+  color: white;
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+}
+
+/* Hover solo en dispositivos con puntero */
+@media (hover: hover) {
+  .btn-primary:hover {
+    background: var(--accent-green-hover);
+  }
+  
+  .btn-secondary:hover {
+    background: var(--bg-secondary);
+    border-color: var(--accent-blue);
+  }
+}
+
+/* Táctil en móviles */
+@media (hover: none) {
+  .btn-primary:active {
+    background: var(--accent-green-pressed);
+    transform: scale(0.98);
+  }
+  
+  .btn-secondary:active {
+    background: var(--bg-secondary);
+    transform: scale(0.98);
+  }
+}
+
+/* Lista de módulos */
+.modulo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modulo-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modulo-item:hover {
+  border-color: var(--accent-blue);
+  background: var(--bg-primary);
+}
+
+.modulo-item.selected {
+  border-color: var(--accent-green);
+  background: var(--bg-primary);
+}
+
+.modulo-numero {
+  font-weight: 600;
+  color: var(--accent-blue);
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.modulo-descripcion {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+/* Toast de notificaciones */
+.toast {
+  position: fixed;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  padding: 12px 24px;
+  border-radius: 6px;
+  border: 1px solid var(--border-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: bottom 0.3s;
+  z-index: 10000;
+  font-size: 14px;
+  max-width: 90%;
+}
+
+.toast.show {
+  bottom: 24px;
+}
+
+.toast.success {
+  border-color: var(--success);
+  background: rgba(35, 134, 54, 0.1);
+}
+
+.toast.error {
+  border-color: var(--error);
+  background: rgba(218, 54, 51, 0.1);
+}
+
+.toast.warning {
+  border-color: var(--warning);
+  background: rgba(210, 153, 34, 0.1);
+}
+
+.toast.info {
+  border-color: var(--info);
+  background: rgba(31, 111, 235, 0.1);
+}
+
+/* Loading overlay */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(13, 17, 23, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loading-overlay.show {
+  display: flex;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-primary);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* Modal de instrucciones */
+.modal-instrucciones {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.modal-content h3 {
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.modal-content p {
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.modal-content textarea {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  padding: 12px;
+  margin: 16px 0;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.modal-content button {
+  background: var(--accent-blue);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* Responsive - Mobile */
+@media (max-width: 1023px) {
+  .container {
+    padding: 12px;
+  }
+  
+  .main-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .header-actions {
+    width: 100%;
+  }
+  
+  .header-actions button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
+  
+  .code-area {
+    height: 300px;
+    font-size: 14px;
+  }
+  
+  button:not(.btn-secondary) {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
+  
+  .section {
+    padding: 16px;
+  }
+}
+
+/* Responsive - Desktop */
+@media (min-width: 1024px) {
+  .header-actions button {
+    width: auto;
+  }
+  
+  button {
+    width: auto;
+  }
+}
+</style>
+<!-- MOD-002: FIN -->
+
+<!-- MOD-003: NOTAS [INICIO] -->
+<!--
+DESCRIPCIÓN:
+Estilos CSS para CodeWorkShop con tema GitHub Dark.
+CSS funcional de v01.06 con estructura modular v01.07.
+
+VERSIÓN: 01.07 - Versión simplificada
+- CSS 100% funcional de v01.06
+- Solo 3 módulos: ENCABEZADO, APERTURA STYLE, NOTAS
+- Sin modularización interna del CSS para evitar conflictos
+- Delimitadores MOD-XXX solo en comentarios HTML externos
+
+DECISIÓN TÉCNICA:
+Se mantiene el CSS como un bloque monolítico dentro de <style>
+para garantizar que el navegador lo procese correctamente.
+Los delimitadores MOD-XXX solo están FUERA del CSS.
+
+PRÓXIMAS MEJORAS:
+- Si se necesita modularizar internamente, hacerlo cuando
+  CodeWorkShop soporte mejor archivos CSS embebidos
+-->
+<!-- MOD-003: FIN -->
