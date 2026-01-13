@@ -1,0 +1,428 @@
+<!-- MOD-001: ENCABEZADO [INICIO] -->
+<!--
+*****************************************
+PROYECTO: CodeWorkShop
+ARCHIVO: scripts.html
+VERSIÓN: 01.08
+FECHA: 13/01/2026 12:01 (UTC-5)
+*****************************************
+-->
+<!-- MOD-001: FIN -->
+
+<!-- MOD-002: APERTURA SCRIPT [INICIO] -->
+<script>
+<!-- MOD-002: FIN -->
+
+<!-- MOD-003: VARIABLES GLOBALES [INICIO] -->
+<!-- Variables de estado de la aplicación -->
+let codigoOriginal = '';
+let modulosDetectados = [];
+let moduloSeleccionado = null;
+<!-- MOD-003: FIN -->
+
+<!-- MOD-004: COPIAR ESTÁNDAR DESDE GOOGLE DOC [INICIO] -->
+function copiarInstruccionesIA() {
+  mostrarCargando(true);
+  console.log('📋 Obteniendo estándar desde Google Doc...');
+  
+  google.script.run
+    .withSuccessHandler(function(resultado) {
+      mostrarCargando(false);
+      
+      if (!resultado.success) {
+        mostrarNotificacion('❌ ' + resultado.error, 'error');
+        console.error('Error al obtener estándar:', resultado.error);
+        return;
+      }
+      
+      copiarTexto(resultado.texto);
+      console.log('✅ Estándar obtenido correctamente');
+    })
+    .withFailureHandler(function(error) {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error de conexión', 'error');
+      console.error('Error fatal al obtener estándar:', error);
+    })
+    .obtenerEstandar();
+}
+
+function copiarTexto(texto) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texto)
+      .then(() => {
+        mostrarNotificacion('✅ Estándar CodeWorkShop copiado', 'success');
+        console.log('📋 Estándar copiado al portapapeles');
+      })
+      .catch(() => {
+        copiarTextoFallback(texto);
+      });
+  } else {
+    copiarTextoFallback(texto);
+  }
+}
+
+function copiarTextoFallback(texto) {
+  const textarea = document.createElement('textarea');
+  textarea.value = texto;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  
+  try {
+    const exitoso = document.execCommand('copy');
+    if (exitoso) {
+      mostrarNotificacion('✅ Estándar CodeWorkShop copiado', 'success');
+      console.log('📋 Estándar copiado (fallback)');
+    } else {
+      throw new Error('execCommand falló');
+    }
+  } catch (err) {
+    mostrarNotificacion('❌ No se pudo copiar. Usa Ctrl+C manualmente', 'error');
+    console.error('Error al copiar:', err);
+    mostrarModalEstandar(texto);
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+
+function mostrarModalEstandar(texto) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-instrucciones';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3>📋 Estándar CodeWorkShop</h3>
+      <p>Selecciona todo el texto y copia con Ctrl+C:</p>
+      <textarea readonly style="width:100%; height:400px; font-family:monospace;">
+${texto}
+      </textarea>
+      <button onclick="this.closest('.modal-instrucciones').remove()">Cerrar</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+<!-- MOD-004: FIN -->
+
+<!-- MOD-005: COPIAR URL PDF DEL ESTÁNDAR [INICIO] -->
+function copiarUrlPdfEstandar() {
+  const urlPdf = 'https://docs.google.com/document/d/1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA/export?format=pdf';
+  
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(urlPdf)
+      .then(() => {
+        mostrarNotificacion('✅ URL del PDF copiada al portapapeles', 'success');
+        console.log('📄 URL PDF copiada:', urlPdf);
+      })
+      .catch(() => {
+        copiarUrlPdfFallback(urlPdf);
+      });
+  } else {
+    copiarUrlPdfFallback(urlPdf);
+  }
+}
+
+function copiarUrlPdfFallback(urlPdf) {
+  const textarea = document.createElement('textarea');
+  textarea.value = urlPdf;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  
+  try {
+    const exitoso = document.execCommand('copy');
+    if (exitoso) {
+      mostrarNotificacion('✅ URL del PDF copiada al portapapeles', 'success');
+      console.log('📄 URL PDF copiada (fallback):', urlPdf);
+    } else {
+      mostrarNotificacion('❌ No se pudo copiar la URL', 'error');
+    }
+  } catch (err) {
+    mostrarNotificacion('❌ Error al copiar URL', 'error');
+    console.error('Error al copiar URL PDF:', err);
+  } finally {
+    document.body.removeChild(textarea);
+  }
+}
+<!-- MOD-005: FIN -->
+
+<!-- MOD-006: ANALIZAR MÓDULOS [INICIO] -->
+function analizarModulos() {
+  const codigo = document.getElementById('codigoOriginal').value;
+  
+  if (!codigo.trim()) {
+    mostrarNotificacion('⚠️ Por favor, carga el código primero', 'warning');
+    return;
+  }
+  
+  if (!codigo.includes('MOD-')) {
+    mostrarNotificacion('⚠️ No se detectaron módulos en el código', 'warning');
+    return;
+  }
+  
+  mostrarCargando(true);
+  console.log('📥 Código cargado:', codigo.length, 'caracteres');
+  
+  google.script.run
+    .withSuccessHandler(function(resultado) {
+      mostrarCargando(false);
+      
+      if (!resultado.success) {
+        mostrarNotificacion(resultado.error, 'error');
+        console.error('Error al parsear:', resultado);
+        return;
+      }
+      
+      codigoOriginal = codigo;
+      modulosDetectados = resultado.modulos;
+      mostrarModulos(resultado.modulos);
+      
+      <!-- Mostrar tipo de archivo detectado -->
+      const tipoMensaje = resultado.tipo === 'html' ? 'HTML' : 'GS';
+      mostrarNotificacion('✅ Módulos detectados: ' + resultado.modulos.length + ' (tipo: ' + tipoMensaje + ')', 'success');
+      console.log('🔍 Módulos detectados:', resultado.modulos);
+      console.log('📄 Tipo de archivo:', resultado.tipo);
+    })
+    .withFailureHandler(function(error) {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error de conexión', 'error');
+      console.error('Error fatal:', error);
+    })
+    .parsearModulos(codigo);
+}
+<!-- MOD-006: FIN -->
+
+<!-- MOD-007: MOSTRAR MÓDULOS [INICIO] -->
+function mostrarModulos(modulos) {
+  const lista = document.getElementById('listaModulos');
+  lista.innerHTML = '';
+  
+  modulos.forEach((modulo, index) => {
+    const item = document.createElement('div');
+    item.className = 'modulo-item';
+    item.onclick = () => seleccionarModulo(index);
+    
+    <!-- Agregar badge del tipo de archivo -->
+    const tipoBadge = modulo.tipo === 'html' 
+      ? '<span style="font-size:10px;opacity:0.7;margin-left:8px;">HTML</span>' 
+      : '<span style="font-size:10px;opacity:0.7;margin-left:8px;">GS</span>';
+    
+    item.innerHTML = `
+      <span class="modulo-numero">MOD-${modulo.numero}${tipoBadge}</span>
+      <span class="modulo-descripcion">${modulo.descripcion}</span>
+    `;
+    
+    lista.appendChild(item);
+  });
+  
+  document.getElementById('seccionModulos').style.display = 'block';
+}
+<!-- MOD-007: FIN -->
+
+<!-- MOD-008: SELECCIONAR MÓDULO [INICIO] -->
+function seleccionarModulo(index) {
+  moduloSeleccionado = modulosDetectados[index];
+  
+  document.querySelectorAll('.modulo-item').forEach((item, i) => {
+    if (i === index) {
+      item.classList.add('selected');
+    } else {
+      item.classList.remove('selected');
+    }
+  });
+  
+  document.getElementById('moduloActual').value = moduloSeleccionado.codigo;
+  document.getElementById('seccionModuloActual').style.display = 'block';
+  document.getElementById('seccionNuevoModulo').style.display = 'block';
+  
+  mostrarNotificacion('✅ Módulo MOD-' + moduloSeleccionado.numero + ' seleccionado', 'info');
+  console.log('📌 Módulo seleccionado:', moduloSeleccionado);
+}
+<!-- MOD-008: FIN -->
+
+<!-- MOD-009: APLICAR CAMBIO [INICIO] -->
+function aplicarCambio() {
+  if (!validarAntesDeEnviar()) {
+    return;
+  }
+  
+  const nuevoModulo = document.getElementById('nuevoModulo').value;
+  
+  mostrarCargando(true);
+  console.log('🔄 Aplicando cambio al módulo MOD-' + moduloSeleccionado.numero);
+  
+  google.script.run
+    .withSuccessHandler(function(resultado) {
+      mostrarCargando(false);
+      
+      if (!resultado.success) {
+        mostrarNotificacion(resultado.error, 'error');
+        console.error('Error al reemplazar:', resultado);
+        return;
+      }
+      
+      document.getElementById('codigoResultante').value = resultado.codigo;
+      document.getElementById('seccionResultado').style.display = 'block';
+      mostrarNotificacion('✅ Cambio aplicado correctamente', 'success');
+      console.log('✅ Código actualizado');
+      
+      document.getElementById('codigoResultante').scrollIntoView({ behavior: 'smooth' });
+    })
+    .withFailureHandler(function(error) {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error al aplicar cambio', 'error');
+      console.error('Error fatal:', error);
+    })
+    .reemplazarModulo(codigoOriginal, moduloSeleccionado.numero, nuevoModulo);
+}
+<!-- MOD-009: FIN -->
+
+<!-- MOD-010: VALIDAR ANTES DE ENVIAR [INICIO] -->
+function validarAntesDeEnviar() {
+  if (!codigoOriginal) {
+    mostrarNotificacion('⚠️ Primero carga el código original', 'warning');
+    return false;
+  }
+  
+  if (!moduloSeleccionado) {
+    mostrarNotificacion('⚠️ Selecciona un módulo', 'warning');
+    return false;
+  }
+  
+  const nuevoCodigo = document.getElementById('nuevoModulo').value;
+  if (!nuevoCodigo.trim()) {
+    mostrarNotificacion('⚠️ El nuevo código está vacío', 'warning');
+    return false;
+  }
+  
+  return true;
+}
+<!-- MOD-010: FIN -->
+
+<!-- MOD-011: COPIAR RESULTADO [INICIO] -->
+function copiarResultado() {
+  const codigo = document.getElementById('codigoResultante').value;
+  
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(codigo)
+      .then(() => {
+        mostrarNotificacion('✅ Código copiado al portapapeles', 'success');
+      })
+      .catch(() => {
+        copiarResultadoFallback();
+      });
+  } else {
+    copiarResultadoFallback();
+  }
+}
+
+function copiarResultadoFallback() {
+  const textarea = document.getElementById('codigoResultante');
+  textarea.select();
+  
+  try {
+    document.execCommand('copy');
+    mostrarNotificacion('✅ Código copiado al portapapeles', 'success');
+  } catch (err) {
+    mostrarNotificacion('❌ No se pudo copiar', 'error');
+  }
+}
+<!-- MOD-011: FIN -->
+
+<!-- MOD-012: REINICIAR [INICIO] -->
+function reiniciar() {
+  document.getElementById('codigoOriginal').value = '';
+  document.getElementById('nuevoModulo').value = '';
+  document.getElementById('codigoResultante').value = '';
+  
+  document.getElementById('seccionModulos').style.display = 'none';
+  document.getElementById('seccionModuloActual').style.display = 'none';
+  document.getElementById('seccionNuevoModulo').style.display = 'none';
+  document.getElementById('seccionResultado').style.display = 'none';
+  
+  codigoOriginal = '';
+  modulosDetectados = [];
+  moduloSeleccionado = null;
+  
+  mostrarNotificacion('🔄 Listo para nueva modificación', 'info');
+  console.log('🔄 Aplicación reiniciada');
+}
+<!-- MOD-012: FIN -->
+
+<!-- MOD-013: NOTIFICACIONES [INICIO] -->
+function mostrarNotificacion(mensaje, tipo = 'success') {
+  const toast = document.getElementById('toast');
+  const iconos = {
+    success: '✅',
+    error: '❌',
+    warning: '⚠️',
+    info: 'ℹ️'
+  };
+  
+  toast.innerHTML = `${iconos[tipo]} ${mensaje}`;
+  toast.className = `toast ${tipo} show`;
+  
+  setTimeout(() => {
+    toast.className = 'toast';
+  }, 3000);
+}
+<!-- MOD-013: FIN -->
+
+<!-- MOD-014: LOADING OVERLAY [INICIO] -->
+function mostrarCargando(mostrar) {
+  const loading = document.getElementById('loading');
+  if (mostrar) {
+    loading.classList.add('show');
+  } else {
+    loading.classList.remove('show');
+  }
+}
+<!-- MOD-014: FIN -->
+
+<!-- MOD-015: ABRIR PÁGINA DE TESTS [INICIO] -->
+function abrirTests() {
+  google.script.run
+    .withSuccessHandler(function(url) {
+      if (url) {
+        window.open(url, '_blank');
+        console.log('🧪 Abriendo tests en:', url);
+      } else {
+        mostrarNotificacion('❌ No se pudo obtener la URL', 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      mostrarNotificacion('❌ Error: ' + error.message, 'error');
+      console.error('Error al abrir tests:', error);
+    })
+    .obtenerURLTests();
+}
+<!-- MOD-015: FIN -->
+
+<!-- MOD-016: CÓDIGO DE CIERRE [INICIO] -->
+<!-- Inicialización completada -->
+console.log('✅ Scripts de CodeWorkShop cargados');
+console.log('📋 Soporta archivos .GS y .HTML (CodeWorkshop v2.2)');
+<!-- MOD-016: FIN -->
+
+<!-- MOD-017: CIERRE SCRIPT [INICIO] -->
+</script>
+<!-- MOD-017: FIN -->
+
+<!-- MOD-018: NOTAS [INICIO] -->
+<!--
+DESCRIPCIÓN:
+Scripts frontend de CodeWorkShop para la interfaz de usuario.
+Maneja la interacción con el backend, visualización de módulos,
+y gestión del flujo de trabajo de modificación modular.
+
+CAMBIOS REALIZADOS:
+- MOD-005: Nuevo botón para copiar URL
+
+DEPENDENCIAS: (pendiente anotar dependencias entre módulos con otras funciones o módulos de otros archivos)
+
+ADVERTENCIAS: (anotar si se requiere)
+
+ESTRUCTURA DE MÓDULOS: (pendiente anotar resumen de lista)
+
+-->
+<!-- MOD-018: FIN -->
