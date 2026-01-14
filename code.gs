@@ -1,10 +1,12 @@
 // MOD-001: ENCABEZADO [INICIO]
-/* *****************************************
+/*
+*****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.09
-FECHA: 13/01/2026 19:14 (UTC-5)
-***************************************** */
+VERSIÓN: 01.10 (base 01.07)
+FECHA: 10/01/2026 15:45 (UTC-5)
+*****************************************
+*/
 // MOD-001: FIN
 
 // MOD-002: FORZAR PERMISOS [INICIO]
@@ -286,23 +288,17 @@ function reemplazarModulo(codigoCompleto, numeroModulo, nuevoCodigoModulo) {
 // MOD-009: FIN
 
 // MOD-010: ACTUALIZAR VERSIÓN [INICIO]
-/*
- * Actualiza automáticamente la sección de encabezado con nueva versión y fecha
- * sin incluir segundos para evitar valores undefined.
- *
- * @param {string} codigo - Texto completo del código donde se activará el reemplazo
- * @param {Object} headerActual - Información extraída del header actual (proyecto, archivo, versión, tipo)
- * @returns {string} - Código completo con nuevo encabezado actualizado
+/**
+ * Actualiza automáticamente la versión y fecha en el header
+ * Soporta ambos formatos (.GS y .HTML)
  */
 function actualizarVersion(codigo, headerActual) {
   try {
-    // Extraer partes de version actual
     const versionParts = headerActual.version.split('.');
     if (versionParts.length === 2) {
-      // Incrementar la parte menor de la versión
-      versionParts[1] = String(parseInt(versionParts[1], 10) + 1).padStart(2, '0');
+      versionParts[1] = String(parseInt(versionParts[1]) + 1).padStart(2, '0');
       const nuevaVersion = versionParts.join('.');
-
+      
       // Obtener fecha y hora sin segundos
       const now = new Date();
       const TZ = 'America/Lima';
@@ -314,42 +310,42 @@ function actualizarVersion(codigo, headerActual) {
       const min  = Utilities.formatDate(now, TZ, 'mm');
 
       const nuevaFecha = `${dia}/${mes}/${ano} ${hora}:${min} (UTC-5)`;
-
+      
       let headerRegex, nuevoHeader;
-
-      // Construir encabezado dependiendo de tipo de archivo (.gs o .html)
+      
       if (headerActual.tipo === 'html') {
-        headerRegex = /<!--[\s\S]*?-->/;
-        nuevoHeader =
-`<!-- *****************************************
+        // Header para HTML
+        headerRegex = /<!--\s*\*+[\s\S]*?\*+\s*-->/;
+        nuevoHeader = `<!--
+*****************************************
 PROYECTO: ${headerActual.proyecto}
 ARCHIVO: ${headerActual.archivo}
 VERSIÓN: ${nuevaVersion}
 FECHA: ${nuevaFecha}
-***************************************** -->`;
+*****************************************
+-->`;
       } else {
+        // Header para GS
         headerRegex = /\/\*\s*\*+[\s\S]*?\*+\s*\*\//;
-        nuevoHeader =
-`/* *****************************************
+        nuevoHeader = `/*
+*****************************************
 PROYECTO: ${headerActual.proyecto}
 ARCHIVO: ${headerActual.archivo}
 VERSIÓN: ${nuevaVersion}
 FECHA: ${nuevaFecha}
-***************************************** */`;
+*****************************************
+*/`;
       }
-
-      // Reemplazar encabezado antiguo con el nuevo
+      
       const codigoActualizado = codigo.replace(headerRegex, nuevoHeader);
-
-      Logger.log(`📌 Encabezado actualizado: ${headerActual.version} → ${nuevaVersion}`);
+      Logger.log('✅ Versión actualizada: ' + headerActual.version + ' → ' + nuevaVersion);
       return codigoActualizado;
     }
-
-    // Si no coincide con el formato esperado de versión, no se modifica
+    
     return codigo;
-
-  } catch (e) {
-    Logger.log('⚠️ Error actualizando versión/fecha: ' + e.message);
+    
+  } catch (error) {
+    Logger.log('⚠️ No se pudo actualizar versión: ' + error.message);
     return codigo;
   }
 }
@@ -408,8 +404,14 @@ estándar CodeWorkshop v2.2:
 - Archivos .GS: usa // para comentarios
 - Archivos .HTML: usa <!-- --> para comentarios
 
-CAMBIOS EN v01.09 (CRÍTICO):
-- Se corrigió la generación del encabezado para eliminar los segundos inexistentes en el timestamp.
+CAMBIOS EN v01.07 (CRÍTICO):
+- MOD-005: Nueva función detectarTipoArchivo() para identificar .GS vs .HTML
+- MOD-006: parsearModulos() ahora detecta automáticamente el tipo y usa regex apropiada
+- MOD-007: extraerHeader() soporta headers en ambos formatos
+- MOD-008: validarModulo() valida según el tipo de archivo
+- MOD-009: reemplazarModulo() usa regex correcta según tipo detectado
+- MOD-010: actualizarVersion() genera headers en formato correcto
+- Código cumple con estándar v2.2 (este archivo usa formato .GS)
 
 DEPENDENCIAS:
 - MOD-003: Requiere archivos HTML (index, style, scripts, testweb)
