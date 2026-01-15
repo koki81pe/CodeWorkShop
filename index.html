@@ -3,8 +3,8 @@
 ******************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: index.html
-VERSIÓN: 01.08
-FECHA: 10/01/2026 15:50 (UTC-5)
+VERSIÓN: 01.09
+FECHA: 14/01/2026 16:36 (UTC-5)
 ******************************************
 -->
 <!-- MOD-001: FIN -->
@@ -24,7 +24,7 @@ FECHA: 10/01/2026 15:50 (UTC-5)
 <!-- MOD-003: CONTAINER PRINCIPAL [INICIO] -->
 <div class="container">
 <!-- MOD-003: FIN -->
-  
+
 <!-- MOD-004: HEADER [INICIO] -->
 <div class="main-header">
   <div class="header-content">
@@ -36,7 +36,7 @@ FECHA: 10/01/2026 15:50 (UTC-5)
             title="Copia la URL del PDF del estándar">
       🔗 Copiar URL
     </button>
-    <button class="btn-secondary" onclick="copiarInstruccionesIA()" 
+    <button class="btn-secondary" onclick="copiarInstruccionesIA()"
             title="Copia el estándar CodeWorkShop para entrenar IAs">
       📋 Copiar Estándar
     </button>
@@ -47,52 +47,52 @@ FECHA: 10/01/2026 15:50 (UTC-5)
   </div>
 </div>
 <!-- MOD-004: FIN -->
-  
+
 <!-- MOD-005: SECCIÓN CARGA DE CÓDIGO [INICIO] -->
 <div class="section">
   <h2>1. Cargar Código Original</h2>
-  <textarea id="codigoOriginal" 
-            class="code-area" 
+  <textarea id="codigoOriginal"
+            class="code-area"
             placeholder="Pega aquí tu código con módulos MOD-XXX..."></textarea>
   <button class="btn-primary" onclick="analizarModulos()">
     🔍 Analizar Módulos
   </button>
 </div>
 <!-- MOD-005: FIN -->
-  
+
 <!-- MOD-006: SECCIÓN LISTA DE MÓDULOS [INICIO] -->
 <div class="section" id="seccionModulos" style="display:none;">
   <h2>2. Seleccionar Módulo a Modificar</h2>
   <div id="listaModulos" class="modulo-list"></div>
 </div>
 <!-- MOD-006: FIN -->
-  
+
 <!-- MOD-007: SECCIÓN CÓDIGO ACTUAL [INICIO] -->
 <div class="section" id="seccionModuloActual" style="display:none;">
   <h2>3. Código Actual del Módulo</h2>
-  <textarea id="moduloActual" 
-            class="code-area" 
+  <textarea id="moduloActual"
+            class="code-area"
             readonly></textarea>
 </div>
 <!-- MOD-007: FIN -->
-  
+
 <!-- MOD-008: SECCIÓN NUEVO CÓDIGO [INICIO] -->
 <div class="section" id="seccionNuevoModulo" style="display:none;">
   <h2>4. Nuevo Código del Módulo</h2>
-  <textarea id="nuevoModulo" 
-            class="code-area" 
+  <textarea id="nuevoModulo"
+            class="code-area"
             placeholder="Pega aquí el nuevo código del módulo MOD-XXX..."></textarea>
   <button class="btn-primary" onclick="aplicarCambio()">
     ✅ Aplicar Cambio
   </button>
 </div>
 <!-- MOD-008: FIN -->
-  
+
 <!-- MOD-009: SECCIÓN RESULTADO [INICIO] -->
 <div class="section" id="seccionResultado" style="display:none;">
   <h2>5. Código Resultante</h2>
-  <textarea id="codigoResultante" 
-            class="code-area" 
+  <textarea id="codigoResultante"
+            class="code-area"
             readonly></textarea>
   <button class="btn-secondary" onclick="copiarResultado()">
     📋 Copiar Código
@@ -102,7 +102,7 @@ FECHA: 10/01/2026 15:50 (UTC-5)
   </button>
 </div>
 <!-- MOD-009: FIN -->
-  
+
 <!-- MOD-010: NOTIFICACIONES Y LOADING [INICIO] -->
 <div id="toast" class="toast"></div>
 <div id="loading" class="loading-overlay">
@@ -114,9 +114,9 @@ FECHA: 10/01/2026 15:50 (UTC-5)
 <!-- MOD-011: CIERRE CONTAINER [INICIO] -->
 </div>
 <!-- MOD-011: FIN -->
-  
+
 <!-- MOD-012: CÓDIGO DE CIERRE [INICIO] -->
-  <?!= include('scripts'); ?>
+<?!= include('scripts'); ?>
 </body>
 </html>
 <!-- MOD-012: FIN -->
@@ -124,73 +124,48 @@ FECHA: 10/01/2026 15:50 (UTC-5)
 <!-- MOD-013: NOTAS [INICIO] -->
 <!--
 DESCRIPCIÓN:
-Página principal de CodeWorkShop para modificación modular de código.
-Permite cargar código, analizar módulos, seleccionar y reemplazar módulos
-específicos de forma quirúrgica sin afectar el resto del archivo.
+Página principal (contenedor UI) de CodeWorkShop.
+Actúa como esqueleto visual y estructural para la modificación
+modular y jerárquica de código.
 
-CAMBIOS EN v01.07 (CRÍTICO):
-- Cumple con estándar CodeWorkshop v2.2 para archivos HTML
-- TODOS los comentarios usan sintaxis HTML: 
-- MOD-003: Container principal separado en su propio módulo
-- MOD-011: Cierre del container en módulo separado
-- MOD-012: Código de cierre con includes agregado
-- MOD-013: Módulo de NOTAS agregado
-- Sin comentarios // en ninguna parte del archivo
-- Compatible con detección de tipo de archivo (GS/HTML) del backend v01.07
+ESTÁNDAR:
+- SOPORTE COMPLETO CodeWorkShop v2.3
+- IDs alfanuméricos y jerárquicos:
+  • MOD-004
+  • MOD-004A
+  • MOD-004-S01
+  • MOD-004-S01A
+
+INTEGRACIÓN CON BACKEND:
+- Compatible con backend code.gs v01.11 / v01.12
+- Renderiza estructuras jerárquicas ya ordenadas por el backend
+- No asume listas planas de módulos
+
+FLUJO DE TRABAJO (v2.3):
+1. Usuario carga código original
+2. scripts.html envía código al backend
+3. Backend parsea, ordena y clasifica módulos y submódulos
+4. Sistema muestra módulos y submódulos respetando
+   el orden natural y jerárquico
+5. Usuario selecciona módulo o submódulo
+6. Se muestra el código actual
+7. Usuario pega nuevo código conservando el ID
+8. Backend reemplaza el bloque exacto
+9. Sistema muestra el resultado final
 
 DEPENDENCIAS:
-- MOD-002: Requiere archivos style.html y scripts.html vía include()
-- MOD-004: Botón "Copiar Estándar" llama a copiarInstruccionesIA() de scripts.html
-  que obtiene el estándar desde Google Doc (code.gs MOD-012)
-- MOD-004: Botón "Tests" llama a abrirTests() de scripts.html
-- MOD-005: analizarModulos() de scripts.html llama a parsearModulos() del backend
-  que ahora detecta automáticamente el tipo de archivo (GS/HTML)
-- MOD-006: listaModulos se llena dinámicamente mostrando badges de tipo de archivo
-- MOD-008: aplicarCambio() llama a reemplazarModulo() del backend
-- MOD-010: Elementos de UI (toast, loading) controlados por scripts.html
-- Backend code.gs v01.07: Requiere funciones con detección automática de tipo
+- style.html v01.08
+- scripts.html v01.09
+- Backend code.gs v01.11+
 
 ADVERTENCIAS:
-- El análisis de módulos requiere código con formato MOD-XXX correcto
-- El backend ahora detecta automáticamente si es .GS o .HTML
-- Las secciones se muestran/ocultan dinámicamente vía JavaScript
-- Los textareas readonly no permiten edición manual
-- El loading overlay cubre toda la pantalla cuando está activo
-- El estándar se obtiene desde Google Doc, no desde archivo local
+- NO modificar IDs de contenedores HTML
+- NO cambiar includes de style/scripts
+- El reemplazo depende del ID exacto del módulo
 
-ESTRUCTURA DE MÓDULOS:
-- MOD-001: Encabezado con metadata del archivo
-- MOD-002: Apertura HTML con head y body
-- MOD-003: Apertura del container principal
-- MOD-004: Header con título y botones de acción
-- MOD-005 a MOD-009: Secciones del flujo de trabajo
-- MOD-010: Elementos de notificaciones y loading
-- MOD-011: Cierre del container principal
-- MOD-012: Código de cierre con includes y tags HTML
-- MOD-013: Notas y documentación (este módulo)
-
-FLUJO DE TRABAJO:
-1. Usuario carga código en MOD-005
-2. analizarModulos() envía código al backend
-3. Backend detecta tipo (GS/HTML) y parsea módulos
-4. Sistema muestra módulos con badge de tipo en MOD-006
-5. Usuario selecciona módulo, se muestra en MOD-007
-6. Usuario pega nuevo código en MOD-008
-7. aplicarCambio() valida y envía al backend
-8. Backend reemplaza módulo y actualiza versión
-9. Sistema muestra resultado en MOD-009
-
-INTEGRACIÓN CON BACKEND v01.07:
-- parsearModulos(): Recibe propiedad 'tipo' en cada módulo ('gs' o 'html')
-- Badges visuales muestran tipo de archivo de cada módulo
-- Mensajes de éxito incluyen información del tipo detectado
-- Compatible con ambos formatos de comentarios (// para GS,  para HTML)
-
-PRÓXIMAS MEJORAS:
-- Agregar preview visual de cambios antes de aplicar
-- Implementar validación de sintaxis en el cliente según tipo detectado
-- Agregar soporte para deshacer/rehacer cambios
-- Mejorar visualización de diferencias entre versiones
-- Cache del estándar para reducir llamadas a Google Docs
+ESTADO:
+✔ Coherente con motor jerárquico
+✔ Documentación actualizada
+✔ Seguro para mantenimiento futuro
 -->
 <!-- MOD-013: FIN -->
