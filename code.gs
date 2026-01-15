@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.10 (base 01.07)
-FECHA: 10/01/2026 15:45 (UTC-5)
+VERSIÓN: 01.13
+FECHA: 15/01/2026 10:17 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -73,122 +73,156 @@ function include(filename) {
 }
 // MOD-004: FIN
 
-// MOD-005: DETECTAR TIPO DE ARCHIVO [INICIO]
+// MOD-005: DETECTAR MÓDULOS (AGNÓSTICO) [INICIO]
 /**
- * Detecta si el código es .GS o .HTML basándose en su contenido
- * @param {string} codigo - El código completo a analizar
- * @return {string} 'gs' o 'html'
+ * Detecta si un código contiene delimitadores MOD válidos,
+ * sin importar el tipo de comentario (// o <!-- -->).
+ *
+ * No decide tipo de archivo.
+ * No impone formato.
+ * Solo verifica presencia de MODs.
+ *
+ * @param {string} codigo - Código completo a analizar
+ * @return {boolean} true si hay al menos un MOD-XXX
  */
-function detectarTipoArchivo(codigo) {
-  // Si contiene comentarios HTML de módulo, es HTML
-  if (/<!--\s*MOD-\d{3}:/i.test(codigo)) {
-    return 'html';
-  }
-  
-  // Si contiene comentarios JS de módulo, es GS
-  if (/\/\/\s*MOD-\d{3}:/i.test(codigo)) {
-    return 'gs';
-  }
-  
-  // Fallback: detectar por tags HTML
-  if (/<html|<script|<style|<!DOCTYPE/i.test(codigo)) {
-    return 'html';
-  }
-  
-  // Por defecto, asumimos GS
-  return 'gs';
+function contieneModulos(codigo) {
+  if (!codigo || typeof codigo !== 'string') return false;
+
+  const patronMOD = /(<!--|\/\/)\s*MOD-\d{3}[A-Z]?(-S\d{2}[A-Z]?)?/i;
+  return patronMOD.test(codigo);
 }
 // MOD-005: FIN
 
-// MOD-006: PARSEAR MÓDULOS [INICIO]
-/**
- * Parsea módulos del código detectando automáticamente el tipo de archivo
- * Soporta archivos .GS (// comentarios) y .HTML (<!-- comentarios -->)
- */
+// MOD-006: PARSEAR MÓDULOS (AGNÓSTICO TOTAL v1.8) [INICIO]
 function parsearModulos(codigoCompleto) {
   try {
-    if (!codigoCompleto || codigoCompleto.trim() === '') {
-      return { success: false, error: 'Código vacío' };
+    if (!codigoCompleto || typeof codigoCompleto !== 'string') {
+      return { success: false, error: 'Código inválido o vacío' };
     }
-    
-    const tipoArchivo = detectarTipoArchivo(codigoCompleto);
-    Logger.log('📄 Tipo de archivo detectado: ' + tipoArchivo.toUpperCase());
-    
-    let modulosRegex;
-    
-    if (tipoArchivo === 'html') {
-      // Regex para archivos HTML: <!-- MOD-XXX: ... [INICIO] --> ... <!-- MOD-XXX: FIN -->
-      modulosRegex = /<!--\s*MOD-(\d{3}):\s*(.+?)\s*\[INICIO\]\s*-->([\s\S]*?)<!--\s*MOD-\1:\s*FIN\s*-->/g;
-    } else {
-      // Regex para archivos GS: // MOD-XXX: ... [INICIO] ... // MOD-XXX: FIN
-      modulosRegex = /\/\/\s*MOD-(\d{3}):\s*(.+?)\s*\[INICIO\]([\s\S]*?)\/\/\s*MOD-\1:\s*FIN/g;
-    }
-    
+
     const modulos = [];
+
+    // 1️⃣ Detectar TODOS los INICIO (MOD y SubMOD)
+    const inicioRegex =
+      /(<!--|\/\/)\s*MOD-([0-9]{3}[A-Z]?(?:-S[0-9]{2}[A-Z]?)?)\s*:\s*(.*?)\s*\[INICIO\]/gi;
+
     let match;
-    
-    while ((match = modulosRegex.exec(codigoCompleto)) !== null) {
+
+    while ((match = inicioRegex.exec(codigoCompleto)) !== null) {
+      const id = match[2].trim();
+      const descripcion = match[3]?.trim() || '';
+
+      // 2️⃣ Buscar FIN correspondiente desde este punto
+      const idSeguro = id.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const finRegex = new RegExp(`MOD-${idSeguro}\\s*:\\s*FIN`, 'i');
+
+      const resto = codigoCompleto.slice(match.index);
+      const finMatch = finRegex.exec(resto);
+
+      if (!finMatch) continue;
+
+      const bloque = resto.slice(
+        0,
+        finMatch.index + finMatch[0].length
+      );
+
       modulos.push({
-        numero: match[1],
-        descripcion: match[2].trim(),
-        codigo: match[0],
-        inicio: match.index,
-        fin: match.index + match[0].length,
-        tipo: tipoArchivo
+        id,
+        descripcion,
+        codigo: bloque.trim()
       });
     }
-    
+
     if (modulos.length === 0) {
-      return { success: false, error: 'No se detectaron módulos válidos' };
+      return { success: false, error: 'No se detectaron MODs' };
     }
-    
-    Logger.log('✅ Módulos parseados: ' + modulos.length + ' (tipo: ' + tipoArchivo + ')');
-    return { success: true, modulos: modulos, tipo: tipoArchivo };
-    
+
+    // 3️⃣ Eliminar duplicados (mismo ID + mismo contenido)
+    const unicos = [];
+    const vistos = new Set();
+
+    modulos.forEach(m => {
+      const key = m.id + '|' + m.codigo.length;
+      if (!vistos.has(key)) {
+        vistos.add(key);
+        unicos.push(m);
+      }
+    });
+
+    // 4️⃣ Orden natural por ID
+    unicos.sort((a, b) =>
+      a.id.localeCompare(b.id, undefined, { numeric: true })
+    );
+
+    Logger.log(`✅ MOD-006 v1.8: ${unicos.length} módulos detectados`);
+
+    return {
+      success: true,
+      modulos: unicos,
+      tipo: 'plano'
+    };
+
   } catch (error) {
-    Logger.log('❌ Error en parsearModulos: ' + error.message);
+    Logger.log('❌ Error en MOD-006 v1.8: ' + error.message);
     return { success: false, error: error.message };
   }
 }
 // MOD-006: FIN
 
-// MOD-007: EXTRAER HEADER [INICIO]
+// MOD-007: EXTRAER HEADER (AGNÓSTICO) [INICIO]
 /**
- * Extrae el header del código, soportando ambos formatos (.GS y .HTML)
+ * Extrae el header CodeWorkShop sin asumir tipo de archivo.
+ * Soporta:
+ * - /* ... *\/
+ * - <!-- ... -->
+ *
+ * Campos obligatorios:
+ * PROYECTO, ARCHIVO, VERSIÓN, FECHA
+ *
+ * El header DEBE estar al inicio del archivo.
  */
 function extraerHeader(codigoCompleto) {
   try {
-    const tipoArchivo = detectarTipoArchivo(codigoCompleto);
-    
-    let headerRegex;
-    
-    if (tipoArchivo === 'html') {
-      // Header en HTML: <!-- ... -->
-      headerRegex = /<!--\s*\*+\s*PROYECTO:\s*(.+?)\s*ARCHIVO:\s*(.+?)\s*VERSIÓN:\s*(.+?)\s*FECHA:\s*(.+?)\s*\*+\s*-->/s;
-    } else {
-      // Header en GS: /* ... */
-      headerRegex = /\/\*\s*\*+\s*PROYECTO:\s*(.+?)\s*ARCHIVO:\s*(.+?)\s*VERSIÓN:\s*(.+?)\s*FECHA:\s*(.+?)\s*\*+\s*\*\//s;
+    if (!codigoCompleto || typeof codigoCompleto !== 'string') {
+      return { success: false, error: 'Código inválido' };
     }
-    
+
+    // Header solo si está al inicio (ignora espacios y saltos)
+    const headerRegex = new RegExp(
+      `^\\s*(\\/\\*[\\s\\S]*?\\*\\/|<!--[\\s\\S]*?-->)`
+    );
+
     const match = codigoCompleto.match(headerRegex);
-    
     if (!match) {
-      return { success: false, error: 'Header no encontrado' };
+      return { success: false, error: 'Header no encontrado al inicio' };
     }
-    
-    const header = {
-      proyecto: match[1].trim(),
-      archivo: match[2].trim(),
-      version: match[3].trim(),
-      fecha: match[4].trim(),
-      tipo: tipoArchivo
+
+    const bloque = match[1];
+
+    const campo = (nombre) => {
+      const r = new RegExp(`${nombre}:\\s*(.+)`, 'i');
+      const m = bloque.match(r);
+      return m ? m[1].trim() : null;
     };
-    
-    Logger.log('✅ Header extraído: ' + header.proyecto + ' (tipo: ' + tipoArchivo + ')');
-    return { success: true, header: header };
-    
+
+    const header = {
+      proyecto: campo('PROYECTO'),
+      archivo:  campo('ARCHIVO'),
+      version:  campo('VERSIÓN'),
+      fecha:    campo('FECHA'),
+      raw:      bloque,
+      inicio:   match.index,
+      fin:      match.index + bloque.length
+    };
+
+    if (!header.proyecto || !header.archivo || !header.version || !header.fecha) {
+      return { success: false, error: 'Header incompleto o no estándar' };
+    }
+
+    return { success: true, header };
+
   } catch (error) {
-    Logger.log('❌ Error en extraerHeader: ' + error.message);
+    Logger.log('❌ Error en extraerHeader (MOD-007): ' + error.message);
     return { success: false, error: error.message };
   }
 }
@@ -196,92 +230,128 @@ function extraerHeader(codigoCompleto) {
 
 // MOD-008: VALIDAR MÓDULO [INICIO]
 /**
- * Valida que un módulo tenga el formato correcto según su tipo
+ * Valida que un módulo conserve correctamente
+ * sus delimitadores MOD-[ID] [INICIO] y MOD-[ID] FIN
+ *
+ * ✔ Agnóstico al tipo de comentario
+ *
+ * ✔ NO analiza el contenido interno
+ * ✔ NO usa regex peligrosas
+ * ✔ NO se rompe con strings, regex ni backslashes
+ *
+ * @param {string} codigoModulo - Bloque completo del módulo
+ * @param {string} idEsperado   - ID (ej: "008", "004-S01A")
  */
-function validarModulo(codigoModulo, numeroEsperado) {
+function validarModulo(codigoModulo, idEsperado) {
   try {
-    const tipoArchivo = detectarTipoArchivo(codigoModulo);
-    
-    let inicioRegex, finRegex;
-    
-    if (tipoArchivo === 'html') {
-      // Validación para HTML
-      inicioRegex = new RegExp(`<!--\\s*MOD-${numeroEsperado}:\\s*.+?\\s*\\[INICIO\\]\\s*-->`);
-      finRegex = new RegExp(`<!--\\s*MOD-${numeroEsperado}:\\s*FIN\\s*-->`);
-    } else {
-      // Validación para GS
-      inicioRegex = new RegExp(`\\/\\/\\s*MOD-${numeroEsperado}:\\s*.+?\\s*\\[INICIO\\]`);
-      finRegex = new RegExp(`\\/\\/\\s*MOD-${numeroEsperado}:\\s*FIN`);
+    if (
+      !codigoModulo ||
+      typeof codigoModulo !== 'string' ||
+      !idEsperado
+    ) {
+      return {
+        success: false,
+        error: 'Parámetros inválidos en validarModulo'
+      };
     }
-    
-    if (!inicioRegex.test(codigoModulo)) {
-      return { success: false, error: `Falta [INICIO] en MOD-${numeroEsperado}` };
+
+    const id = idEsperado.trim();
+
+    // Normalizamos a texto plano para búsquedas simples
+    const texto = codigoModulo;
+
+    // 🔹 Patrones simples (NO regex complejas)
+    const inicioOK =
+      texto.includes(`MOD-${id}`) &&
+      texto.includes('[INICIO]');
+
+    const finOK =
+      texto.includes(`MOD-${id}`) &&
+      texto.includes('FIN');
+
+    if (!inicioOK) {
+      return {
+        success: false,
+        error: `Falta etiqueta [INICIO] en MOD-${id}`
+      };
     }
-    
-    if (!finRegex.test(codigoModulo)) {
-      return { success: false, error: `Falta FIN en MOD-${numeroEsperado}` };
+
+    if (!finOK) {
+      return {
+        success: false,
+        error: `Falta etiqueta FIN en MOD-${id}`
+      };
     }
-    
+
+    // 🔹 Orden lógico: INICIO antes que FIN
+    const posInicio = texto.indexOf('[INICIO]');
+    const posFin = texto.lastIndexOf('FIN');
+
+    if (posInicio > posFin) {
+      return {
+        success: false,
+        error: `Orden incorrecto: FIN antes de INICIO en MOD-${id}`
+      };
+    }
+
     return { success: true };
-    
+
   } catch (error) {
-    Logger.log('❌ Error en validarModulo: ' + error.message);
+    Logger.log('❌ Error en validarModulo (MOD-008): ' + error.message);
     return { success: false, error: error.message };
   }
 }
 // MOD-008: FIN
 
-// MOD-009: REEMPLAZAR MÓDULO [INICIO]
-/**
- * Reemplaza un módulo específico en el código
- * Detecta automáticamente el tipo de archivo y usa el formato correcto
- */
-function reemplazarModulo(codigoCompleto, numeroModulo, nuevoCodigoModulo) {
+// MOD-009: REEMPLAZAR MÓDULO (BLOQUE EXACTO v2.6) [INICIO]
+function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
   try {
-    if (!codigoCompleto || !numeroModulo || !nuevoCodigoModulo) {
-      return { success: false, error: 'Parámetros incompletos' };
+    if (!codigoCompleto || !idModulo || !nuevoModulo) {
+      return {
+        success: false,
+        error: 'Parámetros incompletos en reemplazarModulo'
+      };
     }
-    
-    const validacion = validarModulo(nuevoCodigoModulo, numeroModulo);
-    if (!validacion.success) {
-      return validacion;
+
+    const validacion = validarModulo(nuevoModulo, idModulo);
+    if (!validacion.success) return validacion;
+
+    // Escapar ID para regex segura
+    const idSeguro = idModulo.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+    /*
+     * 🔹 Regex CORRECTA:
+     * - Incluye prefijo de comentario si existe (// o <!--)
+     * - Reemplaza el bloque REAL completo
+     * - Evita duplicación de comentarios
+     */
+    const regex = new RegExp(
+      `^[ \\t]*(?:\\/\\/|<!--)?[ \\t]*` +
+      `MOD-${idSeguro}\\s*:[^\\n]*\\[INICIO\\]` +
+      `[\\s\\S]*?` +
+      `MOD-${idSeguro}\\s*:\\s*FIN`,
+      'gm'
+    );
+
+    if (!regex.test(codigoCompleto)) {
+      return {
+        success: false,
+        error: `MOD-${idModulo} no encontrado para reemplazo`
+      };
     }
-    
-    const tipoArchivo = detectarTipoArchivo(codigoCompleto);
-    let moduloRegex;
-    
-    if (tipoArchivo === 'html') {
-      // Regex para HTML
-      moduloRegex = new RegExp(
-        `<!--\\s*MOD-${numeroModulo}:\\s*.+?\\s*\\[INICIO\\]\\s*-->[\\s\\S]*?<!--\\s*MOD-${numeroModulo}:\\s*FIN\\s*-->`,
-        'g'
-      );
-    } else {
-      // Regex para GS
-      moduloRegex = new RegExp(
-        `\\/\\/\\s*MOD-${numeroModulo}:\\s*.+?\\s*\\[INICIO\\][\\s\\S]*?\\/\\/\\s*MOD-${numeroModulo}:\\s*FIN`,
-        'g'
-      );
-    }
-    
-    if (!moduloRegex.test(codigoCompleto)) {
-      return { success: false, error: `Módulo MOD-${numeroModulo} no encontrado en el código original` };
-    }
-    
-    const codigoActualizado = codigoCompleto.replace(moduloRegex, nuevoCodigoModulo.trim());
-    
-    const headerResult = extraerHeader(codigoCompleto);
-    if (headerResult.success) {
-      const codigoConVersionActualizada = actualizarVersion(codigoActualizado, headerResult.header);
-      Logger.log('✅ Módulo MOD-' + numeroModulo + ' reemplazado exitosamente');
-      return { success: true, codigo: codigoConVersionActualizada };
-    }
-    
-    Logger.log('✅ Módulo MOD-' + numeroModulo + ' reemplazado (sin actualizar versión)');
-    return { success: true, codigo: codigoActualizado };
-    
+
+    const codigoActualizado = codigoCompleto.replace(
+      regex,
+      nuevoModulo.trim()
+    );
+
+    return {
+      success: true,
+      codigo: codigoActualizado
+    };
+
   } catch (error) {
-    Logger.log('❌ Error en reemplazarModulo: ' + error.message);
+    Logger.log('❌ Error en MOD-009 v2.6: ' + error.message);
     return { success: false, error: error.message };
   }
 }
@@ -289,45 +359,51 @@ function reemplazarModulo(codigoCompleto, numeroModulo, nuevoCodigoModulo) {
 
 // MOD-010: ACTUALIZAR VERSIÓN [INICIO]
 /**
- * Actualiza automáticamente la versión y fecha en el header
- * Soporta ambos formatos (.GS y .HTML)
+ * Actualiza automáticamente la versión y fecha en el header CodeWorkShop.
+ * Compatible con headers:
+ * - /* ... *\/
+ * - <!-- ... -->
+ *
+ * Requiere header obtenido desde MOD-007 (agnóstico).
  */
-function actualizarVersion(codigo, headerActual) {
+function actualizarVersion(codigoCompleto, headerActual) {
   try {
-    const versionParts = headerActual.version.split('.');
-    if (versionParts.length === 2) {
-      versionParts[1] = String(parseInt(versionParts[1]) + 1).padStart(2, '0');
-      const nuevaVersion = versionParts.join('.');
-      
-      // Obtener fecha y hora sin segundos
-      const now = new Date();
-      const TZ = 'America/Lima';
+    if (
+      !codigoCompleto ||
+      !headerActual ||
+      !headerActual.version ||
+      headerActual.inicio == null ||
+      headerActual.fin == null
+    ) {
+      return codigoCompleto;
+    }
 
-      const dia  = Utilities.formatDate(now, TZ, 'dd');
-      const mes  = Utilities.formatDate(now, TZ, 'MM');
-      const ano  = Utilities.formatDate(now, TZ, 'yyyy');
-      const hora = Utilities.formatDate(now, TZ, 'HH');
-      const min  = Utilities.formatDate(now, TZ, 'mm');
+    // 🔹 Incrementar versión menor (01.13 → 01.14)
+    const partes = headerActual.version.split('.');
+    if (partes.length !== 2) return codigoCompleto;
 
-      const nuevaFecha = `${dia}/${mes}/${ano} ${hora}:${min} (UTC-5)`;
-      
-      let headerRegex, nuevoHeader;
-      
-      if (headerActual.tipo === 'html') {
-        // Header para HTML
-        headerRegex = /<!--\s*\*+[\s\S]*?\*+\s*-->/;
-        nuevoHeader = `<!--
+    partes[1] = String(parseInt(partes[1], 10) + 1).padStart(2, '0');
+    const nuevaVersion = partes.join('.');
+
+    // 🔹 Nueva fecha
+    const now = new Date();
+    const TZ = 'America/Lima';
+    const fecha = Utilities.formatDate(now, TZ, 'dd/MM/yyyy HH:mm');
+    const nuevaFecha = `${fecha} (UTC-5)`;
+
+    // 🔹 Detectar tipo de comentario desde el header original
+    const esHTML = headerActual.raw.trim().startsWith('<!--');
+
+    const nuevoHeader = esHTML
+      ? `<!--
 *****************************************
 PROYECTO: ${headerActual.proyecto}
 ARCHIVO: ${headerActual.archivo}
 VERSIÓN: ${nuevaVersion}
 FECHA: ${nuevaFecha}
 *****************************************
--->`;
-      } else {
-        // Header para GS
-        headerRegex = /\/\*\s*\*+[\s\S]*?\*+\s*\*\//;
-        nuevoHeader = `/*
+-->`
+      : `/*
 *****************************************
 PROYECTO: ${headerActual.proyecto}
 ARCHIVO: ${headerActual.archivo}
@@ -335,22 +411,20 @@ VERSIÓN: ${nuevaVersion}
 FECHA: ${nuevaFecha}
 *****************************************
 */`;
-      }
-      
-      const codigoActualizado = codigo.replace(headerRegex, nuevoHeader);
-      Logger.log('✅ Versión actualizada: ' + headerActual.version + ' → ' + nuevaVersion);
-      return codigoActualizado;
-    }
-    
-    return codigo;
-    
+
+    // 🔹 Reemplazo quirúrgico del header
+    return (
+      codigoCompleto.slice(0, headerActual.inicio) +
+      nuevoHeader +
+      codigoCompleto.slice(headerActual.fin)
+    );
+
   } catch (error) {
-    Logger.log('⚠️ No se pudo actualizar versión: ' + error.message);
-    return codigo;
+    Logger.log('⚠️ Error en actualizarVersion (MOD-010): ' + error.message);
+    return codigoCompleto;
   }
 }
 // MOD-010: FIN
-
 // MOD-011: OBTENER URL DE TESTS [INICIO]
 function obtenerURLTests() {
   try {
@@ -395,49 +469,78 @@ Logger.log('✅ CodeWorkShop Backend v01.07 cargado');
 Logger.log('📋 Soporta archivos .GS y .HTML (CodeWorkshop v2.2)');
 // MOD-013: FIN
 
-// MOD-014: NOTAS [INICIO]
+// MOD-014: ORDENAR Y NORMALIZAR MÓDULOS [INICIO]
+/**
+ * Ordena módulos y submódulos según estándar CodeWorkShop v2.3
+ * Usa metadata generada por MOD-006:
+ * - _ordenBase
+ * - _ordenLetra
+ * - _ordenSub
+ * - _ordenSubLetra
+ *
+ * Orden resultante:
+ * MOD-004
+ * MOD-004A
+ * MOD-004-S01
+ * MOD-004-S01A
+ * MOD-005
+ *
+ * @param {Array} modulos - Array de módulos parseados por MOD-006
+ * @return {Array} Array ordenado de módulos
+ */
+function ordenarModulos(modulos) {
+  try {
+    if (!Array.isArray(modulos)) {
+      return [];
+    }
+    return modulos.sort((a, b) => {
+      // 1️⃣ Orden por número base
+      if (a._ordenBase !== b._ordenBase) {
+        return a._ordenBase - b._ordenBase;
+      }
+      // 2️⃣ Orden por letra base ('' < 'A' < 'B')
+      if (a._ordenLetra !== b._ordenLetra) {
+        return a._ordenLetra.localeCompare(b._ordenLetra);
+      }
+      // 3️⃣ Padre antes que submódulos
+      if (a.esSubmod !== b.esSubmod) {
+        return a.esSubmod ? 1 : -1;
+      }
+      // 4️⃣ Orden por número de submódulo
+      if (a._ordenSub !== b._ordenSub) {
+        return a._ordenSub - b._ordenSub;
+      }
+      // 5️⃣ Orden por letra de submódulo
+      return a._ordenSubLetra.localeCompare(b._ordenSubLetra);
+    });
+  } catch (error) {
+    Logger.log('❌ Error en ordenarModulos (MOD-015): ' + error.message);
+    return modulos;
+  }
+}
+// MOD-014: FIN
+
+// MOD-015: NOTAS [INICIO]
 /*
-DESCRIPCIÓN:
-Backend principal de CodeWorkShop para parseo, validación y reemplazo
-de módulos en código modular. Ahora soporta AMBOS formatos según 
-estándar CodeWorkshop v2.2:
-- Archivos .GS: usa // para comentarios
-- Archivos .HTML: usa <!-- --> para comentarios
+Backend central de CodeWorkShop.
+Responsable de detectar, parsear y reemplazar módulos y submódulos.
 
-CAMBIOS EN v01.07 (CRÍTICO):
-- MOD-005: Nueva función detectarTipoArchivo() para identificar .GS vs .HTML
-- MOD-006: parsearModulos() ahora detecta automáticamente el tipo y usa regex apropiada
-- MOD-007: extraerHeader() soporta headers en ambos formatos
-- MOD-008: validarModulo() valida según el tipo de archivo
-- MOD-009: reemplazarModulo() usa regex correcta según tipo detectado
-- MOD-010: actualizarVersion() genera headers en formato correcto
-- Código cumple con estándar v2.2 (este archivo usa formato .GS)
+CAPACIDADES CLAVE:
+- Soporta MODs y SubMODs jerárquicos (IDs alfanuméricos).
+- Detecta módulos usando patrones MOD-XXX y MOD-XXX-SYY.
+- Independiente del tipo de comentario (// o <!-- -->).
 
-DEPENDENCIAS:
-- MOD-003: Requiere archivos HTML (index, style, scripts, testweb)
-- MOD-005: Clave para detectar tipo de archivo automáticamente
-- MOD-006: Usa MOD-005 para seleccionar regex correcta
-- MOD-009: Usa MOD-005, MOD-006, MOD-007, MOD-008 y MOD-010
-- MOD-012: Requiere acceso a Google Docs API
+FUNCIONES CRÍTICAS:
+- parsearModulos()
+- reemplazarModulo()
+- validarModulo()
 
 ADVERTENCIAS:
-- MOD-002: Debe ejecutarse manualmente antes del primer deploy
-- MOD-005: La detección de tipo se basa en patrones de comentarios MOD-XXX
-- MOD-006: Si no detecta módulos, verifica que usen el formato correcto
-- MOD-010: Solo funciona con versiones formato XX.YY (dos secciones)
-- MOD-012: Requiere que el documento esté compartido correctamente
+- El ID del módulo debe conservarse exactamente.
+- Los delimitadores MOD son la única fuente de verdad.
 
-EJEMPLOS DE USO:
-// Para archivo .GS
-parsearModulos(codigoGS); // Detecta automáticamente y usa // regex
-
-// Para archivo .HTML  
-parsearModulos(codigoHTML); // Detecta automáticamente y usa <!-- --> regex
-
-PRÓXIMAS MEJORAS:
-- Implementar validación de tabulación en módulos
-- Agregar detección automática de módulo de NOTAS
-- Cache del estándar para reducir llamadas a Google Docs
-- Soporte para archivos mixtos (edge cases complejos)
+ESTADO:
+✔ Estable
+✔ Alineado con CodeWorkShop v2.3
 */
-// MOD-014: FIN
+// MOD-015: FIN
