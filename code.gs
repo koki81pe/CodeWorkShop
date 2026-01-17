@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.15
-FECHA: 17/01/2026 08:58 (UTC-5)
+VERSIÓN: 01.16
+FECHA: 17/01/2026 09:48 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -313,7 +313,7 @@ function validarModulo(codigoModulo, idEsperado) {
 }
 // MOD-008: FIN
 
-// MOD-009: REEMPLAZAR MÓDULO (BLOQUE EXACTO v2.9) [INICIO]
+// MOD-009: REEMPLAZAR MÓDULO (BLOQUE EXACTO v3.0) [INICIO]
 function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
   try {
     if (!codigoCompleto || !idModulo || !nuevoModulo) {
@@ -326,15 +326,18 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
     const validacion = validarModulo(nuevoModulo, idModulo);
     if (!validacion.success) return validacion;
 
-    // 🔹 Detectar tipo de comentario
-    const tipoHTML = codigoCompleto.includes('<!-- MOD-');
+    // Escapar ID para regex segura
+    const idSeguro = idModulo.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+
+    // 🔹 Detectar tipo de comentario (buscar al inicio de línea)
+    const tipoHTML = /^[ \t]*<!-- MOD-/m.test(codigoCompleto);
     
-    // 🔹 Buscar inicio con regex SIMPLE (solo para encontrar posición)
+    // 🔹 Buscar inicio AL PRINCIPIO DE LÍNEA solamente
     let inicioRegex;
     if (tipoHTML) {
-      inicioRegex = new RegExp(`<!--\\s*MOD-${idModulo}\\s*:`, 'i');
+      inicioRegex = new RegExp(`^[ \\t]*<!--\\s*MOD-${idSeguro}\\s*:`, 'im');
     } else {
-      inicioRegex = new RegExp(`\\/\\/\\s*MOD-${idModulo}\\s*:`, 'i');
+      inicioRegex = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}\\s*:`, 'im');
     }
 
     const inicioMatch = codigoCompleto.match(inicioRegex);
@@ -347,12 +350,12 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
 
     const inicioPos = inicioMatch.index;
 
-    // 🔹 Buscar FIN con regex SIMPLE desde inicio
+    // 🔹 Buscar FIN desde inicio (también al principio de línea)
     let finRegex;
     if (tipoHTML) {
-      finRegex = new RegExp(`MOD-${idModulo}\\s*:\\s*FIN\\s*-->`, 'i');
+      finRegex = new RegExp(`^[ \\t]*MOD-${idSeguro}\\s*:\\s*FIN\\s*-->`, 'im');
     } else {
-      finRegex = new RegExp(`\\/\\/\\s*MOD-${idModulo}\\s*:\\s*FIN`, 'i');
+      finRegex = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}\\s*:\\s*FIN`, 'im');
     }
 
     const resto = codigoCompleto.slice(inicioPos);
@@ -380,7 +383,7 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
     };
 
   } catch (error) {
-    Logger.log('❌ Error en MOD-009 v2.9: ' + error.message);
+    Logger.log('❌ Error en MOD-009 v3.0: ' + error.message);
     return { success: false, error: error.message };
   }
 }
@@ -567,6 +570,10 @@ FUNCIONES CRÍTICAS:
 ADVERTENCIAS:
 - El ID del módulo debe conservarse exactamente.
 - Los delimitadores MOD son la única fuente de verdad.
+
+ACTUALIZACIÓN V01.16:
+- Resuelta incompatibilidad con el MOD-009 al cambiar este mismo código
+- Recordar versión estable V01.15
 
 ESTADO:
 ✔ Estable
