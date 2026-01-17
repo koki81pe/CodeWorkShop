@@ -1,1 +1,12 @@
-
+Log: 17/01/2026 - 07:43
+VM52:37 Tab cambiado a: deberes
+VM52:37 Tab cambiado a: cursosyrep
+VM39:186 ✏️ Editar curso: 8
+1069457835-warden_bin_i18n_warden__es_419.js:149 Net state changed from IDLE to BUSY
+1069457835-warden_bin_i18n_warden__es_419.js:149 Net state changed from BUSY to IDLE
+VM39:49 📚 Cargando cursos para: TEST05
+1069457835-warden_bin_i18n_warden__es_419.js:149 Net state changed from IDLE to BUSY
+1069457835-warden_bin_i18n_warden__es_419.js:149 Net state changed from BUSY to IDLE
+VM39:58 📚 Respuesta recibida: {data: Array(5), success: true}
+VM39:73 📚 Cursos cargados: 5
+VM39:120 📚 Tabla renderizada con 5 cursos
