@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.13
-FECHA: 15/01/2026 10:17 (UTC-5)
+VERSIÓN: 01.14
+FECHA: 17/01/2026 08:01 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -93,7 +93,7 @@ function contieneModulos(codigo) {
 }
 // MOD-005: FIN
 
-// MOD-006: PARSEAR MÓDULOS (AGNÓSTICO TOTAL v1.8) [INICIO]
+// MOD-006: PARSEAR MÓDULOS (AGNÓSTICO TOTAL v1.9) [INICIO]
 function parsearModulos(codigoCompleto) {
   try {
     if (!codigoCompleto || typeof codigoCompleto !== 'string') {
@@ -109,12 +109,22 @@ function parsearModulos(codigoCompleto) {
     let match;
 
     while ((match = inicioRegex.exec(codigoCompleto)) !== null) {
+      const tipoComentario = match[1]; // <!-- o //
       const id = match[2].trim();
       const descripcion = match[3]?.trim() || '';
 
       // 2️⃣ Buscar FIN correspondiente desde este punto
       const idSeguro = id.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      const finRegex = new RegExp(`MOD-${idSeguro}\\s*:\\s*FIN`, 'i');
+      
+      // 🔹 CORRECCIÓN: Capturar el cierre del comentario si existe
+      let finRegex;
+      if (tipoComentario === '<!--') {
+        // Para HTML: capturar "MOD-XXX: FIN -->"
+        finRegex = new RegExp(`MOD-${idSeguro}\\s*:\\s*FIN\\s*-->`, 'i');
+      } else {
+        // Para GS: capturar "// MOD-XXX: FIN"
+        finRegex = new RegExp(`\\/\\/\\s*MOD-${idSeguro}\\s*:\\s*FIN`, 'i');
+      }
 
       const resto = codigoCompleto.slice(match.index);
       const finMatch = finRegex.exec(resto);
@@ -154,7 +164,7 @@ function parsearModulos(codigoCompleto) {
       a.id.localeCompare(b.id, undefined, { numeric: true })
     );
 
-    Logger.log(`✅ MOD-006 v1.8: ${unicos.length} módulos detectados`);
+    Logger.log(`✅ MOD-006 v1.9: ${unicos.length} módulos detectados`);
 
     return {
       success: true,
@@ -163,7 +173,7 @@ function parsearModulos(codigoCompleto) {
     };
 
   } catch (error) {
-    Logger.log('❌ Error en MOD-006 v1.8: ' + error.message);
+    Logger.log('❌ Error en MOD-006 v1.9: ' + error.message);
     return { success: false, error: error.message };
   }
 }
@@ -303,7 +313,7 @@ function validarModulo(codigoModulo, idEsperado) {
 }
 // MOD-008: FIN
 
-// MOD-009: REEMPLAZAR MÓDULO (BLOQUE EXACTO v2.6) [INICIO]
+// MOD-009: REEMPLAZAR MÓDULO (BLOQUE EXACTO v2.7) [INICIO]
 function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
   try {
     if (!codigoCompleto || !idModulo || !nuevoModulo) {
@@ -319,19 +329,27 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
     // Escapar ID para regex segura
     const idSeguro = idModulo.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
-    /*
-     * 🔹 Regex CORRECTA:
-     * - Incluye prefijo de comentario si existe (// o <!--)
-     * - Reemplaza el bloque REAL completo
-     * - Evita duplicación de comentarios
-     */
-    const regex = new RegExp(
-      `^[ \\t]*(?:\\/\\/|<!--)?[ \\t]*` +
-      `MOD-${idSeguro}\\s*:[^\\n]*\\[INICIO\\]` +
-      `[\\s\\S]*?` +
-      `MOD-${idSeguro}\\s*:\\s*FIN`,
-      'gm'
-    );
+    // 🔹 CORRECCIÓN: Detectar tipo de comentario del módulo original
+    const muestraHTML = /<!--\s*MOD-/i.test(codigoCompleto);
+    const muestraGS = /\/\/\s*MOD-/i.test(codigoCompleto);
+
+    let regex;
+
+    if (muestraHTML) {
+      // 🔹 Para HTML: capturar TODO incluyendo el --> final
+      regex = new RegExp(
+        `<!--\\s*MOD-${idSeguro}\\s*:[^\\n]*\\[INICIO\\][\\s\\S]*?` +
+        `MOD-${idSeguro}\\s*:\\s*FIN\\s*-->`,
+        'gm'
+      );
+    } else {
+      // 🔹 Para GS: capturar sin --> (no lo tiene)
+      regex = new RegExp(
+        `\\/\\/\\s*MOD-${idSeguro}\\s*:[^\\n]*\\[INICIO\\][\\s\\S]*?` +
+        `\\/\\/\\s*MOD-${idSeguro}\\s*:\\s*FIN`,
+        'gm'
+      );
+    }
 
     if (!regex.test(codigoCompleto)) {
       return {
@@ -340,6 +358,7 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
       };
     }
 
+    // 🔹 CORRECCIÓN: Reemplazar el bloque COMPLETO (con su --> si lo tiene)
     const codigoActualizado = codigoCompleto.replace(
       regex,
       nuevoModulo.trim()
@@ -351,7 +370,7 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
     };
 
   } catch (error) {
-    Logger.log('❌ Error en MOD-009 v2.6: ' + error.message);
+    Logger.log('❌ Error en MOD-009 v2.7: ' + error.message);
     return { success: false, error: error.message };
   }
 }
