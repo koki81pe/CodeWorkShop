@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.13
-FECHA: 15/01/2026 08:16 (UTC-5)
+VERSIÓN: 01.14
+FECHA: 17/01/2026 14:43 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -12,213 +12,236 @@ FECHA: 15/01/2026 08:16 (UTC-5)
 <!-- MOD-002: SCRIPT PRINCIPAL [INICIO] -->
 <script>
 
-
-// VARIABLES GLOBALES
-let codigoOriginal = '';
-let modulosDetectados = [];
-let moduloSeleccionado = null;
-
-
-// UTILIDAD: ESCAPAR HTML (SOLO UI GENERAL)
-// ⚠️ NO USAR PARA MODS
-function escaparHTML(texto) {
-  return texto
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
+  // MOD-002-S01: VARIABLES GLOBALES [INICIO]
+  let codigoOriginal = '';
+  let modulosDetectados = [];
+  let moduloSeleccionado = null;
+  // MOD-002-S01: FIN
 
 
-// ANALIZAR MODS
-function analizarModulos() {
-  const codigo = document.getElementById('codigoOriginal').value;
+  // MOD-002-S02: UTILIDADES GENERALES [INICIO]
 
-  if (!codigo.trim()) {
-    mostrarNotificacion('⚠️ Carga un código primero', 'warning');
-    return;
+  // UTILIDAD: ESCAPAR HTML (SOLO UI GENERAL)
+  // ⚠️ NO USAR PARA MODS
+  function escaparHTML(texto) {
+    return texto
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
   }
 
-  mostrarCargando(true);
-
-  google.script.run
-    .withSuccessHandler(res => {
-      mostrarCargando(false);
-
-      if (!res.success) {
-        mostrarNotificacion(res.error, 'error');
-        return;
-      }
-
-      codigoOriginal = codigo;
-      modulosDetectados = res.modulos;
-
-      mostrarModulos(modulosDetectados);
-      mostrarNotificacion(`✅ ${res.modulos.length} MODs detectados`, 'success');
-    })
-    .withFailureHandler(() => {
-      mostrarCargando(false);
-      mostrarNotificacion('❌ Error al analizar', 'error');
-    })
-    .parsearModulos(codigo);
-}
+  // MOD-002-S02: FIN
 
 
-// UI MODS
-function mostrarModulos(modulos) {
-  const lista = document.getElementById('listaModulos');
-  lista.innerHTML = '';
+  // MOD-002-S03: ANALISIS DE MODULOS [INICIO]
 
-  modulos.forEach((mod, index) => {
-    const item = document.createElement('div');
-    item.className = 'modulo-item';
-    item.onclick = () => seleccionarModulo(index);
-    item.textContent = `MOD-${mod.id}: ${mod.descripcion}`;
-    lista.appendChild(item);
-  });
+  function analizarModulos() {
+    const codigo = document.getElementById('codigoOriginal').value;
 
-  document.getElementById('seccionModulos').style.display = 'block';
-}
+    if (!codigo.trim()) {
+      mostrarNotificacion('⚠️ Carga un código primero', 'warning');
+      return;
+    }
 
-function seleccionarModulo(index) {
-  moduloSeleccionado = modulosDetectados[index];
+    mostrarCargando(true);
 
-  document.querySelectorAll('.modulo-item').forEach((el, i) => {
-    el.classList.toggle('selected', i === index);
-  });
+    google.script.run
+      .withSuccessHandler(res => {
+        mostrarCargando(false);
 
-  // ✅ MOSTRAR EL MOD TAL CUAL ES (SIN ESCAPAR)
-  const campoActual = document.getElementById('moduloActual');
-  campoActual.value = moduloSeleccionado.codigo;
-  campoActual.readOnly = true;
+        if (!res.success) {
+          mostrarNotificacion(res.error, 'error');
+          return;
+        }
 
-  document.getElementById('seccionModuloActual').style.display = 'block';
-  document.getElementById('seccionNuevoModulo').style.display = 'block';
+        codigoOriginal = codigo;
+        modulosDetectados = res.modulos;
 
-  mostrarNotificacion(
-    `ℹ️ MOD-${moduloSeleccionado.id} seleccionado`,
-    'info'
-  );
-}
-
-
-// REEMPLAZO
-function aplicarCambio() {
-  if (!codigoOriginal || !moduloSeleccionado) {
-    mostrarNotificacion('⚠️ Falta código o módulo', 'warning');
-    return;
+        mostrarModulos(modulosDetectados);
+        mostrarNotificacion(`✅ ${res.modulos.length} MODs detectados`, 'success');
+      })
+      .withFailureHandler(() => {
+        mostrarCargando(false);
+        mostrarNotificacion('❌ Error al analizar', 'error');
+      })
+      .parsearModulos(codigo);
   }
 
-  const nuevoModulo = document.getElementById('nuevoModulo').value;
-  mostrarCargando(true);
-
-  google.script.run
-    .withSuccessHandler(res => {
-      mostrarCargando(false);
-
-      if (!res.success) {
-        mostrarNotificacion(res.error, 'error');
-        return;
-      }
-
-      document.getElementById('codigoResultante').value = res.codigo;
-      document.getElementById('seccionResultado').style.display = 'block';
-
-      mostrarNotificacion('✅ Módulo reemplazado', 'success');
-    })
-    .withFailureHandler(() => {
-      mostrarCargando(false);
-      mostrarNotificacion('❌ Error al aplicar cambio', 'error');
-    })
-    .reemplazarModulo(codigoOriginal, moduloSeleccionado.id, nuevoModulo);
-}
+  // MOD-002-S03: FIN
 
 
-// UTILIDADES UI
-function copiarResultado() {
-  navigator.clipboard.writeText(
-    document.getElementById('codigoResultante').value
-  );
-}
+  // MOD-002-S04: UI – LISTADO Y SELECCION DE MODS [INICIO]
 
-function reiniciar() {
-  codigoOriginal = '';
-  modulosDetectados = [];
-  moduloSeleccionado = null;
-}
+  function mostrarModulos(modulos) {
+    const lista = document.getElementById('listaModulos');
+    lista.innerHTML = '';
 
-function mostrarNotificacion(msg, tipo = 'success') {
-  const toast = document.getElementById('toast');
-  toast.className = `toast ${tipo} show`;
-  toast.textContent = msg;
-  setTimeout(() => toast.className = 'toast', 3000);
-}
+    modulos.forEach((mod, index) => {
+      const item = document.createElement('div');
+      item.className = 'modulo-item';
+      item.onclick = () => seleccionarModulo(index);
+      item.textContent = `MOD-${mod.id}: ${mod.descripcion}`;
+      lista.appendChild(item);
+    });
 
-function mostrarCargando(show) {
-  document.getElementById('loading')
-    .classList.toggle('show', show);
-}
+    document.getElementById('seccionModulos').style.display = 'block';
+  }
 
-// ACCIONES DE HEADER (BOTONES)
+  function seleccionarModulo(index) {
+    moduloSeleccionado = modulosDetectados[index];
 
-// Copiar URL del PDF del estándar
-function copiarUrlPdfEstandar() {
-  const urlPdf =
-    'https://docs.google.com/document/d/1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA/export?format=pdf';
+    document.querySelectorAll('.modulo-item').forEach((el, i) => {
+      el.classList.toggle('selected', i === index);
+    });
 
-  navigator.clipboard.writeText(urlPdf);
-  mostrarNotificacion('✅ URL del estándar copiada', 'success');
-}
+    const campoActual = document.getElementById('moduloActual');
+    campoActual.value = moduloSeleccionado.codigo;
+    campoActual.readOnly = true;
 
-// Copiar contenido del estándar para IA
-function copiarInstruccionesIA() {
-  google.script.run
-    .withSuccessHandler(res => {
-      if (!res || !res.success) {
+    document.getElementById('seccionModuloActual').style.display = 'block';
+    document.getElementById('seccionNuevoModulo').style.display = 'block';
+
+    mostrarNotificacion(
+      `ℹ️ MOD-${moduloSeleccionado.id} seleccionado`,
+      'info'
+    );
+  }
+
+  // MOD-002-S04: FIN
+
+
+  // MOD-002-S05: REEMPLAZO DE MODULOS [INICIO]
+
+  function aplicarCambio() {
+    if (!codigoOriginal || !moduloSeleccionado) {
+      mostrarNotificacion('⚠️ Falta código o módulo', 'warning');
+      return;
+    }
+
+    const nuevoModulo = document.getElementById('nuevoModulo').value;
+    mostrarCargando(true);
+
+    google.script.run
+      .withSuccessHandler(res => {
+        mostrarCargando(false);
+
+        if (!res.success) {
+          mostrarNotificacion(res.error, 'error');
+          return;
+        }
+
+        document.getElementById('codigoResultante').value = res.codigo;
+        document.getElementById('seccionResultado').style.display = 'block';
+
+        mostrarNotificacion('✅ Módulo reemplazado', 'success');
+      })
+      .withFailureHandler(() => {
+        mostrarCargando(false);
+        mostrarNotificacion('❌ Error al aplicar cambio', 'error');
+      })
+      .reemplazarModulo(
+        codigoOriginal,
+        moduloSeleccionado.id,
+        nuevoModulo
+      );
+  }
+
+  // MOD-002-S05: FIN
+
+
+  // MOD-002-S06: UTILIDADES UI [INICIO]
+
+  function copiarResultado() {
+    navigator.clipboard.writeText(
+      document.getElementById('codigoResultante').value
+    );
+  }
+
+  function reiniciar() {
+    codigoOriginal = '';
+    modulosDetectados = [];
+    moduloSeleccionado = null;
+  }
+
+  function mostrarNotificacion(msg, tipo = 'success') {
+    const toast = document.getElementById('toast');
+    toast.className = `toast ${tipo} show`;
+    toast.textContent = msg;
+    setTimeout(() => toast.className = 'toast', 3000);
+  }
+
+  function mostrarCargando(show) {
+    document
+      .getElementById('loading')
+      .classList.toggle('show', show);
+  }
+
+  // MOD-002-S06: FIN
+
+
+  // MOD-002-S07: ACCIONES DE HEADER [INICIO]
+
+  function copiarUrlPdfEstandar() {
+    const urlPdf =
+      'https://docs.google.com/document/d/1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA/export?format=pdf';
+
+    navigator.clipboard.writeText(urlPdf);
+    mostrarNotificacion('✅ URL del estándar copiada', 'success');
+  }
+
+  function copiarInstruccionesIA() {
+    google.script.run
+      .withSuccessHandler(res => {
+        if (!res || !res.success) {
+          mostrarNotificacion(
+            res?.error || '❌ Error al obtener estándar',
+            'error'
+          );
+          return;
+        }
+
+        navigator.clipboard.writeText(res.texto);
         mostrarNotificacion(
-          res?.error || '❌ Error al obtener estándar',
+          '✅ Estándar copiado al portapapeles',
+          'success'
+        );
+      })
+      .withFailureHandler(() => {
+        mostrarNotificacion(
+          '❌ Error al leer el estándar',
           'error'
         );
-        return;
-      }
+      })
+      .obtenerEstandar();
+  }
 
-      navigator.clipboard.writeText(res.texto);
-      mostrarNotificacion(
-        '✅ Estándar copiado al portapapeles',
-        'success'
-      );
-    })
-    .withFailureHandler(() => {
-      mostrarNotificacion(
-        '❌ Error al leer el estándar',
-        'error'
-      );
-    })
-    .obtenerEstandar();
-}
-
-// Abrir página de Tests
-function abrirTests() {
-  google.script.run
-    .withSuccessHandler(url => {
-      if (url) {
-        window.open(url, '_blank');
-      } else {
+  function abrirTests() {
+    google.script.run
+      .withSuccessHandler(url => {
+        if (url) {
+          window.open(url, '_blank');
+        } else {
+          mostrarNotificacion(
+            '❌ No se pudo obtener la URL de Tests',
+            'error'
+          );
+        }
+      })
+      .withFailureHandler(() => {
         mostrarNotificacion(
-          '❌ No se pudo obtener la URL de Tests',
+          '❌ Error al abrir Tests',
           'error'
         );
-      }
-    })
-    .withFailureHandler(() => {
-      mostrarNotificacion(
-        '❌ Error al abrir Tests',
-        'error'
-      );
-    })
-    .obtenerURLTests();
-}
+      })
+      .obtenerURLTests();
+  }
 
-console.log('✅ Scripts CodeWorkShop v2.7 cargados');
+  // MOD-002-S07: FIN
+
+
+  // MOD-002-S08: LOG Y ARRANQUE [INICIO]
+  console.log('✅ Scripts CodeWorkShop v2.7 cargados');
+  // MOD-002-S08: FIN
 
 </script>
 <!-- MOD-002: FIN -->
@@ -228,6 +251,9 @@ console.log('✅ Scripts CodeWorkShop v2.7 cargados');
 scripts.html NO analiza código.
 scripts.html NO modifica MODs.
 scripts.html SOLO muestra y envía texto crudo.
+
+Actualización:
+Código remodulado con hijos en el script v01.14
 
 Toda la lógica vive en:
 - code.gs (MOD-006, MOD-008, MOD-009)
