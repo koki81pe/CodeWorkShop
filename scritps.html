@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.14
-FECHA: 17/01/2026 14:43 (UTC-5)
+VERSIÓN: 01.15
+FECHA: 17/01/2026 23:18 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -69,46 +69,41 @@ FECHA: 17/01/2026 14:43 (UTC-5)
 
   // MOD-002-S03: FIN
 
+<!-- MOD-002-S04: UI – LISTADO Y SELECCION DE MODS [INICIO] -->
 
-  // MOD-002-S04: UI – LISTADO Y SELECCION DE MODS [INICIO]
+function mostrarModulos(modulos) {
+  const lista = document.getElementById('listaModulos');
+  lista.innerHTML = '';
 
-  function mostrarModulos(modulos) {
-    const lista = document.getElementById('listaModulos');
-    lista.innerHTML = '';
+  modulos.forEach((mod, index) => {
+    const item = document.createElement('div');
+    item.className = 'modulo-item';
+    item.onclick = () => seleccionarModulo(index);
+    item.textContent = `${mod.id} ${mod.descripcion}`;
+    lista.appendChild(item);
+  });
 
-    modulos.forEach((mod, index) => {
-      const item = document.createElement('div');
-      item.className = 'modulo-item';
-      item.onclick = () => seleccionarModulo(index);
-      item.textContent = `MOD-${mod.id}: ${mod.descripcion}`;
-      lista.appendChild(item);
-    });
+  document.getElementById('seccionModulos').style.display = 'block';
+}
 
-    document.getElementById('seccionModulos').style.display = 'block';
-  }
+function seleccionarModulo(index) {
+  moduloSeleccionado = modulosDetectados[index];
+  
+  document.querySelectorAll('.modulo-item').forEach((el, i) => {
+    el.classList.toggle('selected', i === index);
+  });
+  
+  const campoActual = document.getElementById('moduloActual');
+  campoActual.value = moduloSeleccionado.codigo;
+  campoActual.readOnly = true;
 
-  function seleccionarModulo(index) {
-    moduloSeleccionado = modulosDetectados[index];
+  document.getElementById('seccionModuloActual').style.display = 'block';
+  document.getElementById('seccionNuevoModulo').style.display = 'block';
 
-    document.querySelectorAll('.modulo-item').forEach((el, i) => {
-      el.classList.toggle('selected', i === index);
-    });
+  mostrarNotificacion(`ℹ️ ${moduloSeleccionado.id} seleccionado`, 'info');
+}
 
-    const campoActual = document.getElementById('moduloActual');
-    campoActual.value = moduloSeleccionado.codigo;
-    campoActual.readOnly = true;
-
-    document.getElementById('seccionModuloActual').style.display = 'block';
-    document.getElementById('seccionNuevoModulo').style.display = 'block';
-
-    mostrarNotificacion(
-      `ℹ️ MOD-${moduloSeleccionado.id} seleccionado`,
-      'info'
-    );
-  }
-
-  // MOD-002-S04: FIN
-
+<!-- MOD-002-S04: FIN -->
 
   // MOD-002-S05: REEMPLAZO DE MODULOS [INICIO]
 
