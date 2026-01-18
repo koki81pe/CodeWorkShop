@@ -1,16 +1,1 @@
-Log: 17/01/2026 - 08:09
-Navigated to https://script.google.com/macros/s/AKfycbwQ2jP-0oXhxm7yzl70CdN5_MyiFdnNF-kiEE4okjcdlAO89B4_7YMZep9RgrzehuoQ/exec
-exec:10 Unrecognized feature: 'ambient-light-sensor'.
-exec:10 Unrecognized feature: 'speaker'.
-exec:10 Unrecognized feature: 'vibrate'.
-exec:10 Unrecognized feature: 'vr'.
-about:blank:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
-userCodeAppPanel?createOAuthDialog=true:1 Unrecognized feature: 'ambient-light-sensor'.
-userCodeAppPanel?createOAuthDialog=true:1 Unrecognized feature: 'speaker'.
-userCodeAppPanel?createOAuthDialog=true:1 Unrecognized feature: 'vibrate'.
-userCodeAppPanel?createOAuthDialog=true:1 Unrecognized feature: 'vr'.
-VM121:209 ✅ Scripts CodeWorkShop v2.7 cargados
-2599463051-warden_bin_i18n_warden__es.js:149 Net state changed from IDLE to BUSY
-2599463051-warden_bin_i18n_warden__es.js:149 Net state changed from BUSY to IDLE
-2599463051-warden_bin_i18n_warden__es.js:149 Net state changed from IDLE to BUSY
-2599463051-warden_bin_i18n_warden__es.js:149 Net state changed from BUSY to IDLE
+Logs de pruebas
