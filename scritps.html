@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.15
-FECHA: 17/01/2026 23:18 (UTC-5)
+VERSIÓN: 01.16
+FECHA: 18/01/2026 06:58 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -29,12 +29,10 @@ FECHA: 17/01/2026 23:18 (UTC-5)
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
   }
-
   // MOD-002-S02: FIN
 
 
   // MOD-002-S03: ANALISIS DE MODULOS [INICIO]
-
   function analizarModulos() {
     const codigo = document.getElementById('codigoOriginal').value;
 
@@ -66,10 +64,9 @@ FECHA: 17/01/2026 23:18 (UTC-5)
       })
       .parsearModulos(codigo);
   }
-
   // MOD-002-S03: FIN
 
-<!-- MOD-002-S04: UI – LISTADO Y SELECCION DE MODS [INICIO] -->
+// MOD-002-S04: UI – LISTADO Y SELECCION DE MODS [INICIO]
 
 function mostrarModulos(modulos) {
   const lista = document.getElementById('listaModulos');
@@ -84,6 +81,12 @@ function mostrarModulos(modulos) {
   });
 
   document.getElementById('seccionModulos').style.display = 'block';
+  
+  // Asegurar que la lista esté expandida al cargar
+  const listaElement = document.getElementById('listaModulos');
+  const btnCollapse = document.getElementById('btnCollapseModulos');
+  listaElement.classList.remove('collapsed');
+  btnCollapse.textContent = '▼';
 }
 
 function seleccionarModulo(index) {
@@ -103,7 +106,20 @@ function seleccionarModulo(index) {
   mostrarNotificacion(`ℹ️ ${moduloSeleccionado.id} seleccionado`, 'info');
 }
 
-<!-- MOD-002-S04: FIN -->
+function toggleModulos() {
+  const lista = document.getElementById('listaModulos');
+  const btnCollapse = document.getElementById('btnCollapseModulos');
+  
+  lista.classList.toggle('collapsed');
+  
+  if (lista.classList.contains('collapsed')) {
+    btnCollapse.textContent = '▶';
+  } else {
+    btnCollapse.textContent = '▼';
+  }
+}
+
+// MOD-002-S04: FIN
 
   // MOD-002-S05: REEMPLAZO DE MODULOS [INICIO]
 
@@ -140,12 +156,10 @@ function seleccionarModulo(index) {
         nuevoModulo
       );
   }
-
   // MOD-002-S05: FIN
 
 
   // MOD-002-S06: UTILIDADES UI [INICIO]
-
   function copiarResultado() {
     navigator.clipboard.writeText(
       document.getElementById('codigoResultante').value
@@ -170,12 +184,10 @@ function seleccionarModulo(index) {
       .getElementById('loading')
       .classList.toggle('show', show);
   }
-
   // MOD-002-S06: FIN
 
 
-  // MOD-002-S07: ACCIONES DE HEADER [INICIO]
-
+// MOD-002-S07: ACCIONES DE HEADER [INICIO]
   function copiarUrlPdfEstandar() {
     const urlPdf =
       'https://docs.google.com/document/d/1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA/export?format=pdf';
@@ -209,28 +221,6 @@ function seleccionarModulo(index) {
       })
       .obtenerEstandar();
   }
-
-  function abrirTests() {
-    google.script.run
-      .withSuccessHandler(url => {
-        if (url) {
-          window.open(url, '_blank');
-        } else {
-          mostrarNotificacion(
-            '❌ No se pudo obtener la URL de Tests',
-            'error'
-          );
-        }
-      })
-      .withFailureHandler(() => {
-        mostrarNotificacion(
-          '❌ Error al abrir Tests',
-          'error'
-        );
-      })
-      .obtenerURLTests();
-  }
-
   // MOD-002-S07: FIN
 
 
