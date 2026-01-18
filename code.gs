@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.23
-FECHA: 18/01/2026 07:08 (UTC-5)
+VERSIÓN: 01.24
+FECHA: 18/01/2026 11:45 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -15,6 +15,8 @@ FECHA: 18/01/2026 07:08 (UTC-5)
  * antes de desplegar la webapp para activar el flujo de autorización
  */
 function forzarPermisos() {
+  const SHEET_ID = '1FsuWVwImc0B-c2H5bxeI8TjEFp-dH-LIFGxyX-t7lZk';
+  
   try {
     DriveApp.getRootFolder().getName();
     Logger.log('✅ Permiso Drive autorizado');
@@ -24,10 +26,23 @@ function forzarPermisos() {
   }
   
   try {
-    SpreadsheetApp.getActiveSpreadsheet();
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const hoja = ss.getSheetByName('Fecha');
+    
+    if (!hoja) {
+      throw new Error('No se encontró la hoja "Fecha"');
+    }
+    
+    const ahora = new Date();
+    const fecha = Utilities.formatDate(ahora, 'America/Lima', 'dd/MM/yyyy HH:mm');
+    
+    hoja.appendRow([fecha]);
+    
     Logger.log('✅ Permiso Spreadsheet autorizado');
+    Logger.log('✅ Fecha registrada: ' + fecha);
   } catch (e) {
-    Logger.log('⚠️ Spreadsheet no disponible (normal si no hay hoja activa)');
+    Logger.log('❌ Error con Spreadsheet: ' + e);
+    throw new Error('Autoriza Spreadsheet y vuelve a ejecutar');
   }
   
   try {
