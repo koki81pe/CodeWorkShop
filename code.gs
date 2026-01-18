@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.20
-FECHA: 17/01/2026 23:59 (UTC-5)
+VERSIÓN: 01.21
+FECHA: 18/01/2026 07:08 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -52,14 +52,6 @@ function forzarPermisos() {
 
 // MOD-003: SERVIR HTML [INICIO]
 function doGet(e) {
-  const page = e.parameter.page || 'index';
-  
-  if (page === 'test') {
-    return HtmlService.createHtmlOutputFromFile('testweb')
-      .setTitle('CodeWorkShop - Tests')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-  
   return HtmlService.createTemplateFromFile('index')
     .evaluate()
     .setTitle('CodeWorkShop')
@@ -486,24 +478,8 @@ FECHA: ${nuevaFecha}
   }
 }
 // MOD-010: FIN
-// MOD-011: OBTENER URL DE TESTS [INICIO]
-function obtenerURLTests() {
-  try {
-    const url = ScriptApp.getService().getUrl();
-    if (url) {
-      Logger.log('✅ URL obtenida: ' + url);
-      return url + '?page=test';
-    }
-    Logger.log('❌ ScriptApp.getService().getUrl() devolvió null');
-    return null;
-  } catch (error) {
-    Logger.log('❌ Error al obtener URL: ' + error.message);
-    return null;
-  }
-}
-// MOD-011: FIN
 
-// MOD-012: OBTENER ESTÁNDAR DESDE GOOGLE DOC [INICIO]
+// MOD-011: OBTENER ESTÁNDAR DESDE GOOGLE DOC [INICIO]
 function obtenerEstandar() {
   try {
     const docId = '1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA';
@@ -522,15 +498,15 @@ function obtenerEstandar() {
     return { success: false, error: 'No se pudo leer el documento. Verifica los permisos.' };
   }
 }
-// MOD-012: FIN
+// MOD-011: FIN
 
-// MOD-013: CÓDIGO DE CIERRE [INICIO]
+// MOD-012: CÓDIGO DE CIERRE [INICIO]
 // Sistema iniciado
 Logger.log('✅ CodeWorkShop Backend v01.07 cargado');
 Logger.log('📋 Soporta archivos .GS y .HTML (CodeWorkshop v2.2)');
-// MOD-013: FIN
+// MOD-012: FIN
 
-// MOD-014: ORDENAR Y NORMALIZAR MÓDULOS [INICIO]
+// MOD-013: ORDENAR Y NORMALIZAR MÓDULOS [INICIO]
 /**
  * Ordena módulos y submódulos según estándar CodeWorkShop v2.3
  * Usa metadata generada por MOD-006:
@@ -579,9 +555,9 @@ function ordenarModulos(modulos) {
     return modulos;
   }
 }
-// MOD-014: FIN
+// MOD-013: FIN
 
-// MOD-015: NOTAS [INICIO]
+// MOD-014: NOTAS [INICIO]
 /*
 Backend central de CodeWorkShop.
 Responsable de detectar, parsear y reemplazar módulos y submódulos.
@@ -600,12 +576,11 @@ ADVERTENCIAS:
 - El ID del módulo debe conservarse exactamente.
 - Los delimitadores MOD son la única fuente de verdad.
 
-ACTUALIZACIÓN V01.17:
-- Reconocer los mod hijos dentro de script y style en un html.
-- Recordar versión media estable V01.16
+ACTUALIZACIÓN V01.23:
+- Eliminar los test
 
 ESTADO:
 ✔ Estable
 ✔ Alineado con CodeWorkshop con hijos y Mods con letras
 */
-// MOD-015: FIN
+// MOD-014: FIN
