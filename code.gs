@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.19
-FECHA: 17/01/2026 23:17 (UTC-5)
+VERSIÓN: 01.20
+FECHA: 17/01/2026 23:59 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -93,7 +93,7 @@ function contieneModulos(codigo) {
 }
 // MOD-005: FIN
 
-// MOD-006: PARSEAR MÓDULOS (AGNÓSTICO TOTAL v2.2) [INICIO]
+// MOD-006: PARSEAR MÓDULOS (AGNÓSTICO TOTAL v2.3) [INICIO]
 function parsearModulos(codigoCompleto) {
   try {
     if (!codigoCompleto || typeof codigoCompleto !== 'string') {
@@ -162,11 +162,13 @@ function parsearModulos(codigoCompleto) {
       }
     });
 
-    unicos.sort((a, b) =>
-      a.id.localeCompare(b.id, undefined, { numeric: true })
-    );
+    unicos.sort((a, b) => {
+      const idA = a.id.replace(/-/g, '~');
+      const idB = b.id.replace(/-/g, '~');
+      return idA.localeCompare(idB, undefined, { numeric: true });
+    });
 
-    Logger.log(`✅ MOD-006 v2.2: ${unicos.length} módulos detectados`);
+    Logger.log(`✅ MOD-006 v2.3: ${unicos.length} módulos detectados`);
 
     return {
       success: true,
@@ -175,7 +177,7 @@ function parsearModulos(codigoCompleto) {
     };
 
   } catch (error) {
-    Logger.log('❌ Error en MOD-006 v2.2: ' + error.message);
+    Logger.log('❌ Error en MOD-006 v2.3: ' + error.message);
     return { success: false, error: error.message };
   }
 }
