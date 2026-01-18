@@ -3,8 +3,8 @@
 ******************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: index.html
-VERSIÓN: 01.09
-FECHA: 14/01/2026 16:36 (UTC-5)
+VERSIÓN: 01.10
+FECHA: 18/01/2026 06:47 (UTC-5)
 ******************************************
 -->
 <!-- MOD-001: FIN -->
@@ -40,10 +40,6 @@ FECHA: 14/01/2026 16:36 (UTC-5)
             title="Copia el estándar CodeWorkShop para entrenar IAs">
       📋 Copiar Estándar
     </button>
-    <button class="btn-secondary" onclick="abrirTests()"
-            title="Ir a la página de tests">
-      🧪 Tests
-    </button>
   </div>
 </div>
 <!-- MOD-004: FIN -->
@@ -62,7 +58,12 @@ FECHA: 14/01/2026 16:36 (UTC-5)
 
 <!-- MOD-006: SECCIÓN LISTA DE MÓDULOS [INICIO] -->
 <div class="section" id="seccionModulos" style="display:none;">
-  <h2>2. Seleccionar Módulo a Modificar</h2>
+  <div class="section-header">
+    <h2>2. Seleccionar Módulo a Modificar</h2>
+    <button class="btn-collapse" id="btnCollapseModulos" onclick="toggleModulos()">
+      ▼
+    </button>
+  </div>
   <div id="listaModulos" class="modulo-list"></div>
 </div>
 <!-- MOD-006: FIN -->
