@@ -28,19 +28,68 @@ CÓDIGO HTML EXTRA
 Texto
 <!-- MOD-005: FIN -->
 
-2. Seleccionar Módulo a Modificar - Módulo seleccionado:
-MOD-002-S01: PARTE1
+2. Seleccionar Módulo a Modificar - En al lista solo sale.
+MOD-MOD-002-S01:: PARTE1
 
-3. Código Actual del Módulo
+Fallas:
+Deberían salir  varios módulos
+El Módulo que sale está mal listado, mal mencionado.
+
+3. Código Actual del Módulo: Si muestra el contenido correcto
 // MOD-002-S01: PARTE1 [INICIO]
 Código de prueba
 // MOD-002-S01: FIN
 
-4. Nuevo Código del Módulo
-// MOD-002-S01: PARTE1 [INICIO]
-PRUEBACódigo de prueba
+4. Nuevo Código del Módulo: Ingresé un código de reemplazo adecuado.
+// MOD-002-S01: PARTE1 PRUEBA [INICIO]
+Código de prueba
+PRUEBA PRUEBA PRUEBA
 // MOD-002-S01: FIN
 
-Log:
+5. Código resultante: Al parecer si funciona
+<!-- MOD-001: ENCABEZADO [INICIO] -->
+<!--
+*****************************************
+PROYECTO: PRUEBA HIJOS
+ARCHIVO: pruebahijos.html
+VERSIÓN: 01.00
+FECHA: 14/01/2026 21:39 (UTC-5)
+*****************************************
+-->
+<!-- MOD-001: FIN -->
+
+<!-- MOD-002: SCRIPT PRINCIPAL [INICIO] -->
+<script>
+// MOD-002-S01: PARTE1 PRUEBA [INICIO]
+Código de prueba
+PRUEBA PRUEBA PRUEBA
+// MOD-002-S01: FIN
+</script>
+<!-- MOD-002: FIN -->
+
+<!-- MOD-003A: EXTRA [INICIO] -->
+<!--MOD-003A-S01X: extra1 [INICIO] -->
+CÓDIGO HTML EXTRA
+<!--MOD-003A-S01X: FIN -->
+<!-- MOD-003A: FIN -->
+
+<!-- MOD-005: NOTAS [INICIO] -->
+Texto
+<!-- MOD-005: FIN -->
+
+Log de la prueba realizada:
+Navigated to https://script.google.com/macros/s/AKfycbwQ2jP-0oXhxm7yzl70CdN5_MyiFdnNF-kiEE4okjcdlAO89B4_7YMZep9RgrzehuoQ/exec
+exec:10 Unrecognized feature: 'ambient-light-sensor'.
+exec:10 Unrecognized feature: 'speaker'.
+exec:10 Unrecognized feature: 'vibrate'.
+exec:10 Unrecognized feature: 'vr'.
+about:blank:1 An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.
+userCodeAppPanel?createOAuthDialog=true:1 Unrecognized feature: 'ambient-light-sensor'.
+userCodeAppPanel?createOAuthDialog=true:1 Unrecognized feature: 'speaker'.
+userCodeAppPanel?createOAuthDialog=true:1 Unrecognized feature: 'vibrate'.
+userCodeAppPanel?createOAuthDialog=true:1 Unrecognized feature: 'vr'.
+VM21:231 ✅ Scripts CodeWorkShop v2.7 cargados
+2599463051-warden_bin_i18n_warden__es.js:149 Net state changed from IDLE to BUSY
+2599463051-warden_bin_i18n_warden__es.js:149 Net state changed from BUSY to IDLE
 2599463051-warden_bin_i18n_warden__es.js:149 Net state changed from IDLE to BUSY
 2599463051-warden_bin_i18n_warden__es.js:149 Net state changed from BUSY to IDLE
