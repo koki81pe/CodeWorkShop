@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.18
-FECHA: 17/01/2026 17:33 (UTC-5)
+VERSIÓN: 01.19
+FECHA: 17/01/2026 23:17 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -93,7 +93,7 @@ function contieneModulos(codigo) {
 }
 // MOD-005: FIN
 
-// MOD-006: PARSEAR MÓDULOS (AGNÓSTICO TOTAL v2.0) [INICIO]
+// MOD-006: PARSEAR MÓDULOS (AGNÓSTICO TOTAL v2.2) [INICIO]
 function parsearModulos(codigoCompleto) {
   try {
     if (!codigoCompleto || typeof codigoCompleto !== 'string') {
@@ -101,47 +101,49 @@ function parsearModulos(codigoCompleto) {
     }
 
     const modulos = [];
+    const lineas = codigoCompleto.split('\n');
 
-    // 1️⃣ Detectar TODOS los INICIO (MOD y SubMOD) al inicio de línea
-    const inicioRegex =
-      /^[ \t]*(<!--|\/\/)\s*MOD-([0-9]{3}[A-Z]?(?:-S[0-9]{2}[A-Z]?)?):\s*(.*?)\s*\[INICIO\]/gim;
-
-    let match;
-
-    while ((match = inicioRegex.exec(codigoCompleto)) !== null) {
-      const tipoComentario = match[1].trim(); // "<!--" o "//"
-      const idSinDospuntos = match[2].trim(); // "003A-S01X"
-      const id = `MOD-${idSinDospuntos}:`; // "MOD-003A-S01X:"
-      const descripcion = match[3]?.trim() || '';
-
-      // 2️⃣ Buscar FIN correspondiente desde este punto
+    for (let i = 0; i < lineas.length; i++) {
+      const linea = lineas[i];
+      
+      const matchHTML = linea.match(/^[ \t]*<!--\s*MOD-([0-9]{3}[A-Z]?(?:-S[0-9]{2}[A-Z]?)?):\s*(.+?)\s*\[INICIO\]/i);
+      const matchGS = linea.match(/^[ \t]*\/\/\s*MOD-([0-9]{3}[A-Z]?(?:-S[0-9]{2}[A-Z]?)?):\s*(.+?)\s*\[INICIO\]/i);
+      
+      if (!matchHTML && !matchGS) continue;
+      
+      const match = matchHTML || matchGS;
+      const tipoComentario = matchHTML ? '<!--' : '//';
+      const idSinDospuntos = match[1].trim();
+      const id = `MOD-${idSinDospuntos}:`;
+      const descripcion = match[2].trim();
+      
       const idSeguro = idSinDospuntos.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
       
-      // 🔹 Construir regex de FIN según el tipo detectado
       let finRegex;
       if (tipoComentario === '<!--') {
-        // Para HTML: "MOD-XXX: FIN -->"
-        finRegex = new RegExp(`^[ \\t]*MOD-${idSeguro}:\\s*FIN\\s*-->`, 'im');
+        finRegex = new RegExp(`MOD-${idSeguro}:\\s*FIN\\s*-->`, 'i');
       } else {
-        // Para GS: "// MOD-XXX: FIN"
-        finRegex = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*FIN`, 'im');
+        finRegex = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*FIN`, 'i');
       }
-
-      const resto = codigoCompleto.slice(match.index);
-      const finMatch = finRegex.exec(resto);
-
-      if (!finMatch) continue;
-
-      const bloque = resto.slice(
-        0,
-        finMatch.index + finMatch[0].length
-      );
-
+      
+      let finEncontrado = false;
+      let codigoBloque = linea + '\n';
+      
+      for (let j = i + 1; j < lineas.length; j++) {
+        codigoBloque += lineas[j] + '\n';
+        if (finRegex.test(lineas[j])) {
+          finEncontrado = true;
+          break;
+        }
+      }
+      
+      if (!finEncontrado) continue;
+      
       modulos.push({
-        id: id,                    // "MOD-003A-S01X:" (con :)
-        tipo: tipoComentario,      // "<!--" o "//"
+        id: id,
+        tipo: tipoComentario,
         descripcion: descripcion,
-        codigo: bloque.trim()
+        codigo: codigoBloque.trim()
       });
     }
 
@@ -149,7 +151,6 @@ function parsearModulos(codigoCompleto) {
       return { success: false, error: 'No se detectaron MODs' };
     }
 
-    // 3️⃣ Eliminar duplicados (mismo ID + mismo contenido)
     const unicos = [];
     const vistos = new Set();
 
@@ -161,12 +162,11 @@ function parsearModulos(codigoCompleto) {
       }
     });
 
-    // 4️⃣ Orden alfanumérico por ID
     unicos.sort((a, b) =>
       a.id.localeCompare(b.id, undefined, { numeric: true })
     );
 
-    Logger.log(`✅ MOD-006 v2.0: ${unicos.length} módulos detectados`);
+    Logger.log(`✅ MOD-006 v2.2: ${unicos.length} módulos detectados`);
 
     return {
       success: true,
@@ -175,7 +175,7 @@ function parsearModulos(codigoCompleto) {
     };
 
   } catch (error) {
-    Logger.log('❌ Error en MOD-006 v2.0: ' + error.message);
+    Logger.log('❌ Error en MOD-006 v2.2: ' + error.message);
     return { success: false, error: error.message };
   }
 }
@@ -333,7 +333,7 @@ function validarModulo(codigoModulo, idEsperado, tipoEsperado) {
 }
 // MOD-008: FIN
 
-// MOD-009: REEMPLAZAR MÓDULO (BLOQUE EXACTO v3.2) [INICIO]
+// MOD-009: REEMPLAZAR MÓDULO (BLOQUE EXACTO v3.3) [INICIO]
 function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
   try {
     if (!codigoCompleto || !idModulo || !nuevoModulo) {
@@ -343,12 +343,9 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
       };
     }
 
-    // 🔹 1. DETECTAR tipo del módulo original en el código
-    // Escapar ID para regex segura (sin los ':' para buscar)
     const idSinDospuntos = idModulo.replace(/^MOD-/, '').replace(/:$/, '');
     const idSeguro = idSinDospuntos.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
-    // Buscar el módulo original con ambos tipos posibles
     const patronHTML = new RegExp(`^[ \\t]*<!--\\s*MOD-${idSeguro}:\\s*`, 'im');
     const patronGS = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*`, 'im');
     
@@ -364,13 +361,11 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
 
     const tipoOriginal = esHTML ? '<!--' : '//';
 
-    // 🔹 2. VALIDAR que el nuevo módulo use el mismo tipo
     const validacion = validarModulo(nuevoModulo, idModulo, tipoOriginal);
     if (!validacion.success) {
       return validacion;
     }
 
-    // 🔹 3. BUSCAR posición de INICIO
     const inicioRegex = esHTML ? patronHTML : patronGS;
     const inicioMatch = codigoCompleto.match(inicioRegex);
     
@@ -383,10 +378,9 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
 
     const inicioPos = inicioMatch.index;
 
-    // 🔹 4. BUSCAR posición de FIN desde INICIO
     let finRegex;
     if (esHTML) {
-      finRegex = new RegExp(`^[ \\t]*MOD-${idSeguro}:\\s*FIN\\s*-->`, 'im');
+      finRegex = new RegExp(`MOD-${idSeguro}:\\s*FIN\\s*-->`, 'i');
     } else {
       finRegex = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*FIN`, 'im');
     }
@@ -401,17 +395,14 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
       };
     }
 
-    // 🔹 5. CALCULAR posición final absoluta
     const finReal = inicioPos + finMatch.index + finMatch[0].length;
 
-    // 🔹 6. EXTRAER antes y después del módulo
     const antes = codigoCompleto.slice(0, inicioPos);
     const despues = codigoCompleto.slice(finReal);
 
-    // 🔹 7. RECONSTRUIR código con el nuevo módulo
     const codigoActualizado = antes + nuevoModulo.trim() + despues;
 
-    Logger.log(`✅ MOD-009 v3.2: ${idModulo} reemplazado exitosamente`);
+    Logger.log(`✅ MOD-009 v3.3: ${idModulo} reemplazado exitosamente`);
 
     return {
       success: true,
@@ -419,7 +410,7 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
     };
 
   } catch (error) {
-    Logger.log('❌ Error en MOD-009 v3.2: ' + error.message);
+    Logger.log('❌ Error en MOD-009 v3.3: ' + error.message);
     return { success: false, error: error.message };
   }
 }
