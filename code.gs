@@ -3,7 +3,7 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.21
+VERSIÓN: 01.23
 FECHA: 18/01/2026 07:08 (UTC-5)
 *****************************************
 */
@@ -557,7 +557,85 @@ function ordenarModulos(modulos) {
 }
 // MOD-013: FIN
 
-// MOD-014: NOTAS [INICIO]
+// MOD-014: REEMPLAZAR MÚLTIPLES MÓDULOS [INICIO]
+/**
+ * Reemplaza múltiples módulos en un solo paso.
+ * Parsea el texto pegado, detecta módulos y los reemplaza secuencialmente.
+ * 
+ * @param {string} codigoCompleto - Código original completo
+ * @param {string} textoMultiMod - Texto con múltiples módulos a reemplazar
+ * @return {Object} {success, codigo?, error?, modulosReemplazados?}
+ */
+function reemplazarMultiplesModulos(codigoCompleto, textoMultiMod) {
+  try {
+    if (!codigoCompleto || !textoMultiMod) {
+      return {
+        success: false,
+        error: 'Faltan parámetros: código original o módulos a reemplazar'
+      };
+    }
+
+    // 1️⃣ Parsear módulos del textarea Multi MOD
+    const resultadoParseo = parsearModulos(textoMultiMod);
+    
+    if (!resultadoParseo.success) {
+      return {
+        success: false,
+        error: 'No se detectaron módulos válidos en el texto pegado'
+      };
+    }
+    
+    const modulosAPegar = resultadoParseo.modulos;
+    
+    if (modulosAPegar.length === 0) {
+      return {
+        success: false,
+        error: 'No se encontraron módulos para reemplazar'
+      };
+    }
+
+    let codigoActualizado = codigoCompleto;
+    
+    // 2️⃣ Reemplazar cada módulo secuencialmente
+    for (let i = 0; i < modulosAPegar.length; i++) {
+      const mod = modulosAPegar[i];
+      
+      const resultado = reemplazarModulo(
+        codigoActualizado,
+        mod.id,
+        mod.codigo
+      );
+      
+      if (!resultado.success) {
+        return {
+          success: false,
+          error: `Error al reemplazar ${mod.id}: ${resultado.error}`
+        };
+      }
+      
+      codigoActualizado = resultado.codigo;
+    }
+    
+    // 3️⃣ Retornar código final
+    Logger.log(`✅ MOD-014: ${modulosAPegar.length} módulos reemplazados exitosamente`);
+    
+    return {
+      success: true,
+      codigo: codigoActualizado,
+      modulosReemplazados: modulosAPegar.length
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error en MOD-014: ' + error.message);
+    return {
+      success: false,
+      error: 'Error inesperado al procesar múltiples módulos'
+    };
+  }
+}
+// MOD-014: FIN
+
+// MOD-099: NOTAS [INICIO]
 /*
 Backend central de CodeWorkShop.
 Responsable de detectar, parsear y reemplazar módulos y submódulos.
@@ -577,10 +655,10 @@ ADVERTENCIAS:
 - Los delimitadores MOD son la única fuente de verdad.
 
 ACTUALIZACIÓN V01.23:
-- Eliminar los test
+- MOD-014 Multi MOD
 
 ESTADO:
 ✔ Estable
 ✔ Alineado con CodeWorkshop con hijos y Mods con letras
 */
-// MOD-014: FIN
+// MOD-099: FIN
