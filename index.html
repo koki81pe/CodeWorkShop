@@ -3,8 +3,8 @@
 ******************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: index.html
-VERSIÓN: 01.10
-FECHA: 18/01/2026 06:47 (UTC-5)
+VERSIÓN: 01.11
+FECHA: 18/01/2026 10:34 (UTC-5)
 ******************************************
 -->
 <!-- MOD-001: FIN -->
@@ -50,9 +50,14 @@ FECHA: 18/01/2026 06:47 (UTC-5)
   <textarea id="codigoOriginal"
             class="code-area"
             placeholder="Pega aquí tu código con módulos MOD-XXX..."></textarea>
-  <button class="btn-primary" onclick="analizarModulos()">
-    🔍 Analizar Módulos
-  </button>
+  <div class="button-group">
+    <button class="btn-primary" onclick="analizarModulos('modXmod')">
+      🔍 MOD x MOD
+    </button>
+    <button class="btn-primary" onclick="analizarModulos('multiMod')">
+      📦 Multi MOD
+    </button>
+  </div>
 </div>
 <!-- MOD-005: FIN -->
 
@@ -80,9 +85,21 @@ FECHA: 18/01/2026 06:47 (UTC-5)
 <!-- MOD-008: SECCIÓN NUEVO CÓDIGO [INICIO] -->
 <div class="section" id="seccionNuevoModulo" style="display:none;">
   <h2>4. Nuevo Código del Módulo</h2>
-  <textarea id="nuevoModulo"
-            class="code-area"
-            placeholder="Pega aquí el nuevo código del módulo MOD-XXX..."></textarea>
+  
+  <!-- Textarea para MOD x MOD (modo individual) -->
+  <div id="areaModXMod">
+    <textarea id="nuevoModulo"
+              class="code-area"
+              placeholder="Pega aquí el nuevo código del módulo MOD-XXX..."></textarea>
+  </div>
+  
+  <!-- Textarea para Multi MOD (modo múltiple) -->
+  <div id="areaMultiMod" style="display:none;">
+    <textarea id="multiModulo"
+              class="code-area"
+              placeholder="Pega aquí múltiples módulos MOD-XXX...&#10;&#10;Cada módulo completo con sus delimitadores [INICIO] y FIN."></textarea>
+  </div>
+  
   <button class="btn-primary" onclick="aplicarCambio()">
     ✅ Aplicar Cambio
   </button>
@@ -122,7 +139,7 @@ FECHA: 18/01/2026 06:47 (UTC-5)
 </html>
 <!-- MOD-012: FIN -->
 
-<!-- MOD-013: NOTAS [INICIO] -->
+<!-- MOD-099: NOTAS [INICIO] -->
 <!--
 DESCRIPCIÓN:
 Página principal (contenedor UI) de CodeWorkShop.
@@ -130,12 +147,7 @@ Actúa como esqueleto visual y estructural para la modificación
 modular y jerárquica de código.
 
 ESTÁNDAR:
-- SOPORTE COMPLETO CodeWorkShop v2.3
-- IDs alfanuméricos y jerárquicos:
-  • MOD-004
-  • MOD-004A
-  • MOD-004-S01
-  • MOD-004-S01A
+- SOPORTE COMPLETO CodeWorkShop v3
 
 INTEGRACIÓN CON BACKEND:
 - Compatible con backend code.gs v01.11 / v01.12
@@ -164,9 +176,7 @@ ADVERTENCIAS:
 - NO cambiar includes de style/scripts
 - El reemplazo depende del ID exacto del módulo
 
-ESTADO:
-✔ Coherente con motor jerárquico
-✔ Documentación actualizada
-✔ Seguro para mantenimiento futuro
+ACTUALIZACIÓN:
+- Multi MOD V01.11
 -->
-<!-- MOD-013: FIN -->
+<!-- MOD-099: FIN -->
