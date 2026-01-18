@@ -3,33 +3,28 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: style.html
-VERSIÓN: 01.08
-FECHA: 14/01/2026 16:20 (UTC-5)
+VERSIÓN: 01.09
+FECHA: 17/01/2026 23:42 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
 
 <!-- MOD-002: APERTURA STYLE [INICIO] -->
 <style>
- /*  =========================================================
-   VARIABLES DE COLOR — GitHub Dark
-   =========================================================  */
+
+// MOD-002-S01: VARIABLES DE COLOR (GitHub Dark) [INICIO]
 :root {
-   /*  Fondos  */
   --bg-primary: #0d1117;
   --bg-secondary: #161b22;
   --bg-tertiary: #21262d;
 
-   /*  Bordes  */
   --border-primary: #30363d;
   --border-secondary: #21262d;
 
-   /*  Textos  */
   --text-primary: #c9d1d9;
   --text-secondary: #8b949e;
   --text-tertiary: #6e7681;
 
-   /*  Acentos  */
   --accent-blue: #58a6ff;
   --accent-green: #238636;
   --accent-green-hover: #2ea043;
@@ -37,16 +32,15 @@ FECHA: 14/01/2026 16:20 (UTC-5)
   --accent-red: #da3633;
   --accent-yellow: #d29922;
 
-   /*  Estados  */
   --success: #238636;
   --error: #da3633;
   --warning: #d29922;
   --info: #1f6feb;
 }
+// MOD-002-S01: FIN
 
- /*  =========================================================
-   RESET Y BASE
-   =========================================================  */
+
+// MOD-002-S02: RESET Y BASE [INICIO]
 * {
   margin: 0;
   padding: 0;
@@ -60,10 +54,9 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
 }
+// MOD-002-S02: FIN
 
- /*  =========================================================
-   CONTENEDOR Y HEADER
-   =========================================================  */
+// MOD-002-S03: CONTENEDOR Y HEADER [INICIO]
 .container {
   max-width: 1400px;
   margin: 0 auto;
@@ -96,10 +89,9 @@ body {
   gap: 12px;
   flex-wrap: wrap;
 }
+// MOD-002-S03: FIN
 
- /*  =========================================================
-   SECCIONES
-   =========================================================  */
+// MOD-002-S04: SECCIONES [INICIO]
 .section {
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
@@ -113,10 +105,9 @@ body {
   font-weight: 600;
   margin-bottom: 16px;
 }
+// MOD-002-S04: FIN
 
- /*  =========================================================
-   ÁREA DE CÓDIGO
-   =========================================================  */
+// MOD-002-S05: ÁREA DE CÓDIGO [INICIO]
 .code-area {
   width: 100%;
   height: calc(100vh - 250px);
@@ -136,10 +127,9 @@ body {
   border-color: var(--accent-blue);
   outline: none;
 }
+// MOD-002-S05: FIN
 
- /*  =========================================================
-   BOTONES
-   =========================================================  */
+// MOD-002-S06: BOTONES [INICIO]
 button {
   padding: 8px 16px;
   border-radius: 6px;
@@ -160,7 +150,6 @@ button {
   border: 1px solid var(--border-primary);
 }
 
- /*  Hover solo en dispositivos con puntero  */
 @media (hover: hover) {
   .btn-primary:hover {
     background: var(--accent-green-hover);
@@ -171,10 +160,9 @@ button {
     border-color: var(--accent-blue);
   }
 }
+// MOD-002-S06: FIN
 
- /*  =========================================================
-   LISTA DE MÓDULOS (v2.3)
-   =========================================================  */
+// MOD-002-S07: LISTA DE MÓDULOS [INICIO]
 .modulo-list {
   display: flex;
   flex-direction: column;
@@ -200,7 +188,6 @@ button {
   border-color: var(--accent-green);
 }
 
- /*  SubMODs (ej: MOD-004-S01)  */
 .modulo-item.submod {
   margin-left: 24px;
   border-left: 3px solid var(--accent-blue);
@@ -216,10 +203,9 @@ button {
 .modulo-descripcion {
   flex: 1;
 }
+// MOD-002-S07: FIN
 
- /*  =========================================================
-   TOAST / NOTIFICACIONES
-   =========================================================  */
+// MOD-002-S08: TOAST / NOTIFICACIONES [INICIO]
 .toast {
   position: fixed;
   bottom: -100px;
@@ -238,10 +224,9 @@ button {
 .toast.error   { border-color: var(--error); }
 .toast.warning { border-color: var(--warning); }
 .toast.info    { border-color: var(--info); }
+// MOD-002-S08: FIN
 
- /*  =========================================================
-   LOADING OVERLAY
-   =========================================================  */
+// MOD-002-S09: LOADING OVERLAY [INICIO]
 .loading-overlay {
   display: none;
   position: fixed;
@@ -270,10 +255,9 @@ button {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+// MOD-002-S09: FIN
 
- /*  =========================================================
-   RESPONSIVE
-   =========================================================  */
+// MOD-002-S10: RESPONSIVE [INICIO]
 @media (max-width: 1023px) {
   .header-actions button,
   button {
@@ -285,6 +269,8 @@ button {
     height: 300px;
   }
 }
+// MOD-002-S10: FIN
+
 </style>
 <!-- MOD-002: FIN -->
 
