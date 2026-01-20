@@ -1,162 +1,169 @@
-STANDAR CODEWORKSHOP v4.0
-
+STANDAR CODEWORKSHOP v5.0
+De: Jorge A. Baudouin 
 Formato de código modular para modificaciones quirúrgicas mediante delimitadores explícitos
-
-
-
+ 
+ 
+ 
 ÍNDICE
-
+ 
 PARTE 1: GUÍA
 1. Introducción
 2. Conceptos Básicos
 3. Estructura Obligatoria
 4. Sintaxis por Lenguaje
 5. Ejemplos Completos
-
+ 
 PARTE 2: REGLAS E INSTRUCCIONES
 6. Reglas de Ejecución
+ 
+ 
+ 
 
-
-
- 
+ 
 PARTE 1: GUÍA
-
+ 
 1. INTRODUCCIÓN
-
+ 
 1.1 ¿Qué es CodeWorkShop?
-
+ 
 CodeWorkShop es un sistema de edición modular de código que permite realizar modificaciones quirúrgicas en archivos de programación mediante la sustitución de bloques delimitados.
-
+ 
 El sistema funciona detectando módulos delimitados por comentarios especiales (MOD-XXX) y permite reemplazar bloques específicos sin tocar el resto del archivo.
-
+ 
 1.2 Objetivo de este Estándar
-
+ 
 Este documento es un lineamiento estándar para la programación modular, diseñado especialmente para que las IAs puedan:
-
-•	Modular código de forma consistente y predecible
-•	Facilitar la edición mediante intercambio de módulos
-•	Reducir errores al reescribir código
-•	Minimizar uso de recursos generando solo los módulos modificados
-
+ 
+•  	Modular código de forma consistente y predecible
+•  	Facilitar la edición mediante intercambio de módulos
+•  	Reducir errores al reescribir código
+•  	Minimizar uso de recursos generando solo los módulos modificados
+ 
 1.3 Ventajas de la Edición Modular
-
+ 
 1. **Precisión:** Solo se modifica el módulo específico, el resto permanece intacto
 2. **Eficiencia:** No es necesario regenerar archivos completos
 3. **Seguridad:** Reduce el riesgo de introducir errores en código no modificado
 4. **Escalabilidad:** Permite trabajar con archivos extensos de forma manejable
-
+ 
 1.4 Principio Fundamental
-
+ 
 REGLA DE ORO:
-
+ 
 Todo el código debe estar dentro de módulos MOD-XXX. Si no está dentro de un módulo, está en riesgo de perderse.
-
-
-
+ 
+ 
+ 
 2. CONCEPTOS BÁSICOS
-
+ 
 2.1 ¿Qué es un Módulo?
-
+ 
 Un módulo es un bloque de código delimitado por comentarios especiales que identifican su inicio y fin.
-
+ 
 Estructura básica:
-
+ 
 MOD-[ID]: [DESCRIPCIÓN] [INICIO]
 [contenido del módulo]
 MOD-[ID]: FIN
-
-
+ 
+ 
 2.2 Componentes de un Módulo
-
+ 
 Cada módulo consta de tres partes obligatorias:
-
+ 
 1. **Delimitador de inicio:** MOD-[ID]: [DESCRIPCIÓN] [INICIO]
    - ID: Identificador numérico único (ej: 001, 002, 003)
    - DESCRIPCIÓN: Texto breve que describe el módulo
    - [INICIO]: Palabra literal con corchetes (obligatorio)
-
+ 
 2. **Contenido:** El código funcional del módulo
-
+ 
 3. **Delimitador de fin:** MOD-[ID]: FIN
    - Debe usar el mismo ID que el inicio
 
+¿Qué es un “Delimitador”?
+Es la línea de texto que determina el inicio de un MOD y también la que determina su fin. 
+
 2.3 Formato de IDs
-
+ 
 Los IDs de módulos siguen estos formatos:
-
+ 
 Módulos principales:
-•	MOD-001, MOD-002, MOD-003
-•	Siempre tres dígitos
-•	Numeración secuencial sin saltos
-
+•  	MOD-001, MOD-002, MOD-003
+•  	Siempre tres dígitos
+•  	Numeración secuencial sin saltos
+ 
 Submódulos (hijos):
-•	MOD-004-S01, MOD-004-S02
-•	Formato: MOD-[padre]-S[número]
-•	Los hijos pertenecen a un módulo padre específico
-•	Numeración secuencial de hijos
-
+•  	MOD-004-S01, MOD-004-S02
+•  	Formato: MOD-[padre]-S[número]
+•  	Los hijos pertenecen a un módulo padre específico
+•  	Numeración secuencial de hijos
+ 
 Orden natural:
-
+ 
 MOD-003
 MOD-004
 MOD-004-S01
 MOD-004-S02
 MOD-005
-
-
+ 
+ 
 2.4 Tipos de Comentarios por Lenguaje
-
+ 
 CodeWorkShop es agnóstico al lenguaje, pero debes respetar la sintaxis de comentarios de cada lenguaje.
-
+ 
 Archivos .GS (JavaScript):
-•	Delimitadores: //
-•	Comentarios internos: // y /* */
-
+•  	Delimitadores: //
+•  	Comentarios internos extra: // y /* */ 
+ 
 Archivos .HTML:
-•	Delimitadores: <!-- -->
-•	Comentarios internos:
-  - En HTML: <!-- -->
-  - Dentro de <script>: // y /* */
-  - Dentro de <style>: /* */
+•  	Delimitadores (La línea de texto que determina el inicio de un MOD y también la que determina su fin.)
+En el código HTML: <!-- -->
+Dentro de <script>: //
+Dentro de <style>: /* */
 
-
-
+•  	Comentarios internos extra que no son Delimitadores:
+En el código HTML: Solo <!-- -->
+Dentro de <script>: // y /* */ (No usar /* */ en los delimitadores)
+Dentro de <style>:  Solo /* */
+ 
+ 
 3. ESTRUCTURA OBLIGATORIA
-
+ 
 3.1 Encabezado del Archivo
-
+ 
 Todo archivo debe iniciar con un encabezado que contiene metadatos del proyecto.
-
+ 
 Formato obligatorio:
-
+ 
 *****************************************
 PROYECTO: [Nombre del Proyecto]
 ARCHIVO: [nombre_archivo.extensión]
 VERSIÓN: [XX.YY]
 FECHA: [DD/MM/AAAA HH:MM (UTC-5)]
 *****************************************
-
-
-CRÍTICO: La fecha y hora deben consultarse en Internet en tiempo real para la zona horaria UTC-5 (Perú). No usar el reloj interno del sistema ni calcular la fecha.
-
+ 
+ 
+CRÍTICO: La fecha y hora deben consultarse en https://www.timeanddate.com/worldclock/peru/lima en tiempo real para la zona horaria UTC-5 (Perú). No usar el reloj interno del sistema ni calcular la fecha.
+ 
 3.2 Orden de Módulos
-
+ 
 Los módulos deben seguir este orden estricto:
-
+ 
 1. **MOD-001: ENCABEZADO** (obligatorio, siempre primero)
 2. **MOD-002: APERTURA** (obligatorio en HTML, opcional en .GS)
 3. **MOD-003 en adelante: CÓDIGO FUNCIONAL** (tantos como necesites)
 4. **MOD-XXX: CÓDIGO DE CIERRE** (obligatorio, penúltimo)
 5. **MOD-YYY: NOTAS** (obligatorio, último)
-
+ 
 3.3 Módulos Especiales
-
+ 
 MOD-001: ENCABEZADO
-
-Protege los metadatos del proyecto. Siempre es el primer módulo.
-
+ 
+Protege los metadatos del proyecto. Siempre es el primer módulo. Es el MOD-001.
+ 
 Para archivos .GS:
-
+ 
 // MOD-001: ENCABEZADO [INICIO]
 /*
 *****************************************
@@ -167,10 +174,10 @@ FECHA: 17/01/2026 09:30 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
-
-
+ 
+ 
 Para archivos .HTML:
-
+ 
 <!-- MOD-001: ENCABEZADO [INICIO] -->
 <!--
 *****************************************
@@ -181,22 +188,22 @@ FECHA: 17/01/2026 09:30 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
-
-
+ 
+ 
 MOD-002: APERTURA
-
+ 
 Cuándo usarlo:
-
+ 
 Este módulo solo debe crearse si hay código estructural (no funcional) al inicio del archivo que necesita protección.
-
+ 
 Obligatorio en HTML:
 Siempre debe existir porque contiene la estructura base del documento.
-
+ 
 Opcional en .GS:
 Solo si hay configuración global o código de preparación. Si el archivo empieza directamente con funciones, MOD-002 será tu primera función.
-
+ 
 Contenido en HTML:
-
+ 
 <!-- MOD-002: APERTURA HTML [INICIO] -->
 <!DOCTYPE html>
 <html lang="es">
@@ -209,10 +216,10 @@ Contenido en HTML:
 <body>
 <div class="container">
 <!-- MOD-002: FIN -->
-
-
+ 
+ 
 Contenido en .GS (solo si necesario):
-
+ 
 // MOD-002: CONFIGURACIÓN GLOBAL [INICIO]
 const CONFIG = {
   spreadsheetId: '1ABC...',
@@ -220,111 +227,111 @@ const CONFIG = {
   columna: 0
 };
 // MOD-002: FIN
-
-
+ 
+ 
 MOD-XXX: CÓDIGO DE CIERRE
-
+ 
 Penúltimo módulo del archivo. Contiene código que se ejecuta al final o cierra estructuras abiertas en MOD-002.
-
+ 
 Para HTML:
 Debe cerrar todo lo que se abrió en MOD-002.
-
-
+ 
+ 
 <!-- MOD-010: CÓDIGO DE CIERRE [INICIO] -->
 </div>
 <?!= include('scripts'); ?>
 </body>
 </html>
 <!-- MOD-010: FIN -->
-
-
+ 
+ 
 Para .GS:
-
+ 
 // MOD-008: CÓDIGO DE CIERRE [INICIO]
 Logger.log('Sistema cargado v01.00');
 // Validaciones finales, inicialización
 // MOD-008: FIN
-
-
+ 
+ 
 Si no hay código de cierre, el módulo puede estar vacío:
-
+ 
 // MOD-006: CÓDIGO DE CIERRE [INICIO]
 // No hay código de cierre en este archivo
 // MOD-006: FIN
-
-
+ 
+ 
 MOD-YYY: NOTAS
-
+ 
 Último módulo del archivo. Contiene documentación breve y puntual.
-
+ 
 Propósito:
-•	Centralizar comentarios técnicos
-•	Mantener limpio el resto del código
-•	Documentar dependencias y advertencias críticas
-
+•  	Centralizar comentarios técnicos
+•  	Mantener limpio el resto del código
+•  	Documentar dependencias y advertencias críticas
+ 
 IMPORTANTE: Debe ser breve, solo información crítica y necesaria. No extenderse en documentación técnica exhaustiva.
-
+ 
 Estructura sugerida:
-
+ 
 // MOD-009: NOTAS [INICIO]
 /*
 DESCRIPCIÓN:
 Breve descripción del archivo y su propósito.
-
+ 
 DEPENDENCIAS:
 - MOD-003: Requiere configuración de X
 - MOD-005: Usa función Y de módulo Z
-
+ 
 ADVERTENCIAS:
 - MOD-004: No maneja valores nulos
 - MOD-007: Requiere permisos de Drive
-
+ 
 [Cualquier otra información crítica necesaria]
 */
 // MOD-009: FIN
-
-
+ 
+ 
 3.4 Reglas para Módulos de Apertura y Cierre
-
+ 
 1. MOD-002: APERTURA es obligatorio en archivos HTML (estructura del documento)
 2. MOD-002: APERTURA es opcional en archivos .GS (solo si hay código de preparación)
 3. Si creas MOD-002: APERTURA, debes crear MOD-XXX: CIERRE correspondiente
 4. No crear módulos vacíos solo para "cumplir la estructura"
 5. Lo que se abre en APERTURA debe cerrarse en CIERRE
 6. No modularizar tags intermedios sin contenido
-
-
-
+ 
+ 
+ 
 4. SINTAXIS POR LENGUAJE
-
+ 
 4.1 Archivos .GS (JavaScript / Google Apps Script)
-
+ 
 Usar exclusivamente sintaxis JavaScript para todos los comentarios.
-
+ 
 Delimitadores de módulos:
-
+ 
 // MOD-003: DESCRIPCIÓN [INICIO]
-
-
+ 
+ 
 Comentarios internos:
-
+ 
 // Comentario de una línea
-
-/* 
+ 
+/*
  * Comentario de
  * múltiples líneas
  */
-
-
+ 
+ 
 Ejemplo completo:
-
+ 
 // MOD-003: VALIDAR DATOS [INICIO]
 function validarDatos(datos) {
   // Verificar que datos no sea nulo
   if (!datos) {
-    throw new Error("Datos vacíos");
+	throw new Error("Datos vacíos");
   }
-  
+ 
   /* Validar estructura de datos:
    * - Debe ser un objeto
    * - Debe tener propiedades requeridas
@@ -332,39 +339,43 @@ function validarDatos(datos) {
   return typeof datos === 'object';
 }
 // MOD-003: FIN
-
-
+ 
+ 
 4.2 Archivos .HTML
-
+ 
 Cada lenguaje dentro del HTML usa sus propios comentarios.
+ 
+Delimitadores de módulos:
+En HTML: <!-- -->
+Dentro de <script>: //
+Dentro de <style>: /* */
+ 
 
-Delimitadores de módulos: Siempre <!-- -->
-
-Comentarios internos:
-•	HTML puro: <!-- -->
-•	Dentro de <script>: // y /* */ (JavaScript)
-•	Dentro de <style>: /* */ (CSS)
-
+Comentarios internos extra que no son delimidaroes: 
+•  	HTML puro: <!-- -->
+•  	Dentro de <script> (JavaScript): // y /* */ ; pero no usar /* */ con delimitadores.
+•  	Dentro de <style> (CSS): Solo usar /* */ 
+ 
 Ejemplo de estructura correcta:
-
+ 
 <!-- MOD-003: CONTENIDO [INICIO] -->
 <div class="container">
   <!-- Comentario HTML -->
   <h1>Título</h1>
 </div>
 <!-- MOD-003: FIN -->
-
+ 
 <!-- MOD-004: JAVASCRIPT [INICIO] -->
 <script>
 // Comentario JavaScript correcto
 function iniciar() {
-  /* Comentario multilínea
+  /** Comentario multilínea
    * JavaScript correcto */
   console.log('Iniciado');
 }
 </script>
 <!-- MOD-004: FIN -->
-
+ 
 <!-- MOD-005: ESTILOS [INICIO] -->
 <style>
 /* Comentario CSS correcto */
@@ -373,20 +384,21 @@ function iniciar() {
 }
 </style>
 <!-- MOD-005: FIN -->
-
-
+ 
+ 
 4.3 ERROR CRÍTICO: Comentarios HTML dentro de <script> y <style>
-
+ 
 NUNCA usar <!-- --> dentro de etiquetas <script> o <style>.
-
+NUNCA usar // dentro de <style>
+ 
 Este error causa:
-•	Funciones no definidas
-•	Variables globales inexistentes
-•	Event listeners rotos
-•	Errores silenciosos sin mensaje en consola
-
+•  	Funciones no definidas
+•  	Variables globales inexistentes
+•  	Event listeners rotos
+•  	Errores silenciosos sin mensaje en consola
+ 
 INCORRECTO:
-
+ 
 <script>
 <!-- Comentario incorrecto -->
 function iniciar() {
@@ -394,10 +406,10 @@ function iniciar() {
   let x = 5;
 }
 </script>
-
-
+ 
+ 
 CORRECTO:
-
+ 
 <script>
 // Comentario correcto
 function iniciar() {
@@ -405,14 +417,14 @@ function iniciar() {
   let x = 5;
 }
 </script>
-
-
+ 
+ 
 4.4 Encapsulado de <script> y <style>
-
+ 
 Los bloques <script> y <style> deben estar completamente dentro de un módulo, desde la etiqueta de apertura hasta el cierre.
-
+ 
 Estructura correcta:
-
+ 
 <!-- MOD-004: JAVASCRIPT [INICIO] -->
 <script>
 // Todo el código JavaScript aquí
@@ -421,7 +433,7 @@ function ejemplo() {
 }
 </script>
 <!-- MOD-004: FIN -->
-
+ 
 <!-- MOD-005: ESTILOS [INICIO] -->
 <style>
 /* Todo el código CSS aquí */
@@ -430,15 +442,15 @@ function ejemplo() {
 }
 </style>
 <!-- MOD-005: FIN -->
-
-
-
-
+ 
+ 
+ 
+ 
 5. EJEMPLOS COMPLETOS
-
+ 
 5.1 Archivo .GS Completo
-
-
+ 
+ 
 // MOD-001: ENCABEZADO [INICIO]
 /*
 *****************************************
@@ -449,7 +461,7 @@ FECHA: 17/01/2026 09:30 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
-
+ 
 // MOD-002: CONFIGURACIÓN [INICIO]
 const CONFIG = {
   hoja: "Inventario",
@@ -457,53 +469,53 @@ const CONFIG = {
   colStock: 1
 };
 // MOD-002: FIN
-
+ 
 // MOD-003: OBTENER HOJA [INICIO]
 function obtenerHoja() {
   return SpreadsheetApp.getActiveSpreadsheet()
-    .getSheetByName(CONFIG.hoja);
+	.getSheetByName(CONFIG.hoja);
 }
 // MOD-003: FIN
-
+ 
 // MOD-004: BUSCAR PRODUCTO [INICIO]
 function buscarProducto(codigo) {
   const hoja = obtenerHoja();
   const datos = hoja.getDataRange().getValues();
-  
+ 
   for (let i = 1; i < datos.length; i++) {
-    if (datos[i][CONFIG.colProducto] === codigo) {
-      return {
-        fila: i + 1,
-        stock: datos[i][CONFIG.colStock]
-      };
-    }
+	if (datos[i][CONFIG.colProducto] === codigo) {
+  	return {
+    	fila: i + 1,
+    	stock: datos[i][CONFIG.colStock]
+  	};
+	}
   }
   return null;
 }
 // MOD-004: FIN
-
+ 
 // MOD-005: CÓDIGO DE CIERRE [INICIO]
 Logger.log('Sistema de inventario cargado v01.00');
 // MOD-005: FIN
-
+ 
 // MOD-006: NOTAS [INICIO]
 /*
 DESCRIPCIÓN:
 Sistema básico de inventario con búsqueda de productos.
-
+ 
 DEPENDENCIAS:
 - MOD-003: Requiere hoja "Inventario" en el Spreadsheet
 - MOD-004: Usa configuración de MOD-002
-
+ 
 ADVERTENCIAS:
 - MOD-004: Devuelve null si no encuentra el producto
 */
 // MOD-006: FIN
-
-
+ 
+ 
 5.2 Archivo .HTML Completo
-
-
+ 
+ 
 <!-- MOD-001: ENCABEZADO [INICIO] -->
 <!--
 *****************************************
@@ -514,7 +526,7 @@ FECHA: 17/01/2026 09:30 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
-
+ 
 <!-- MOD-002: APERTURA HTML [INICIO] -->
 <!DOCTYPE html>
 <html lang="es">
@@ -526,49 +538,49 @@ FECHA: 17/01/2026 09:30 (UTC-5)
 <body>
 <div class="container">
 <!-- MOD-002: FIN -->
-
+ 
 <!-- MOD-003: CONTENIDO PRINCIPAL [INICIO] -->
 <div class="main">
   <h1>Bienvenido</h1>
   <div id="app"></div>
 </div>
 <!-- MOD-003: FIN -->
-
+ 
 <!-- MOD-004: JAVASCRIPT [INICIO] -->
 <script>
 // Función de inicialización
 function iniciar() {
   document.getElementById('app').innerHTML = 'Aplicación cargada';
 }
-
+ 
 // Ejecutar al cargar
 window.onload = iniciar;
 </script>
 <!-- MOD-004: FIN -->
-
+ 
 <!-- MOD-005: CÓDIGO DE CIERRE [INICIO] -->
 </div>
 </body>
 </html>
 <!-- MOD-005: FIN -->
-
+ 
 <!-- MOD-006: NOTAS [INICIO] -->
 <!--
 DESCRIPCIÓN:
 Página principal de la aplicación web.
-
+ 
 DEPENDENCIAS:
 - MOD-004: JavaScript de inicialización
-
+ 
 ADVERTENCIAS:
 - El contenido dinámico se carga en div#app
 -->
 <!-- MOD-006: FIN -->
-
-
+ 
+ 
 5.3 Ejemplo con Submódulos
-
-
+ 
+ 
 // MOD-001: ENCABEZADO [INICIO]
 /*
 *****************************************
@@ -579,7 +591,7 @@ FECHA: 17/01/2026 09:30 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
-
+ 
 // MOD-002: CONFIGURACIÓN [INICIO]
 const CONFIG = {
   hoja: "Ventas",
@@ -587,7 +599,7 @@ const CONFIG = {
   colTotal: 1
 };
 // MOD-002: FIN
-
+ 
 // MOD-003: PROCESAMIENTO DE VENTAS [INICIO]
 function procesarVentas(ventas) {
   const validadas = validarVentas(ventas);
@@ -595,120 +607,124 @@ function procesarVentas(ventas) {
   return guardarVentas(calculadas);
 }
 // MOD-003: FIN
-
+ 
 // MOD-003-S01: VALIDAR VENTAS [INICIO]
 function validarVentas(ventas) {
   return ventas.filter(v => v.total > 0);
 }
 // MOD-003-S01: FIN
-
+ 
 // MOD-003-S02: CALCULAR TOTALES [INICIO]
 function calcularTotales(ventas) {
   return ventas.map(v => ({
-    ...v,
-    impuesto: v.total * 0.18
+	...v,
+	impuesto: v.total * 0.18
   }));
 }
 // MOD-003-S02: FIN
-
+ 
 // MOD-004: CÓDIGO DE CIERRE [INICIO]
 Logger.log('Sistema de ventas cargado');
 // MOD-004: FIN
-
+ 
 // MOD-005: NOTAS [INICIO]
 /*
 DESCRIPCIÓN:
 Procesamiento de ventas con validación y cálculo de impuestos.
-
+ 
 DEPENDENCIAS:
 - MOD-003-S01: Función de validación
 - MOD-003-S02: Función de cálculo
 */
 // MOD-005: FIN
+ 
+ 
+ 
+ 
 
-
-
-
- 
+ 
 PARTE 2: REGLAS E INSTRUCCIONES
-
+ 
 6. REGLAS DE EJECUCIÓN
-
+ 
 REGLAS CRÍTICAS (prioridad máxima)
-
+ 
 REGLA 1: TODO el código debe estar dentro de módulos MOD-XXX. Si una línea de código no está dentro de un módulo, está en riesgo de perderse.
-
+ 
 REGLA 2: MOD-001: ENCABEZADO debe ser la primera línea del archivo. Nunca dejar código antes de MOD-001, ni siquiera DOCTYPE en HTML.
-
-REGLA 3: Cada módulo debe tener [INICIO] con corchetes en el delimitador de apertura. Es obligatorio y literal.
-
+ 
+REGLA 3: Cada módulo debe tener [INICIO] con corchetes en el delimitador de apertura al final de la linea. Es obligatorio y literal.
+ 
 REGLA 4: Cada delimitador FIN debe usar exactamente el mismo ID que su correspondiente INICIO.
-
+ 
 REGLA 5: La numeración de módulos debe ser secuencial sin saltos: 001, 002, 003, 004. No usar 001, 005, 003.
-
-REGLA 6: La fecha y hora del encabezado deben consultarse en Internet en tiempo real para UTC-5 (Perú). No usar el reloj interno del sistema ni calcular la fecha. Formato: DD/MM/AAAA HH:MM (UTC-5).
-
+ 
+REGLA 6: La fecha y hora del encabezado deben consultarse en Internet en tiempo real en https://www.timeanddate.com/worldclock/peru/lima para UTC-5 (Perú). No usar el reloj interno del sistema ni calcular la fecha. Formato: DD/MM/AAAA HH:MM (UTC-5).
+ 
 REGLA 7: Al modificar código que ya tiene módulos, entregar SOLO el módulo modificado, no el archivo completo.
-
+ 
 REGLAS DE ESTRUCTURA
-
+ 
 REGLA 8: Los módulos deben seguir este orden estricto:
 1. MOD-001: ENCABEZADO (obligatorio)
 2. MOD-002: APERTURA (obligatorio en HTML, opcional en .GS)
 3. MOD-003+: CÓDIGO FUNCIONAL (tantos como necesites)
-4. MOD-XXX: CÓDIGO DE CIERRE (obligatorio, penúltimo)
+4. MOD-XXX: CÓDIGO DE CIERRE (Si fuese necesario, penúltimo)
 5. MOD-YYY: NOTAS (obligatorio, último)
-
+ 
 REGLA 9: MOD-001: ENCABEZADO debe contener exactamente estos campos:
-•	PROYECTO
-•	ARCHIVO (con extensión .gs o .html)
-•	VERSIÓN (formato XX.YY)
-•	FECHA (formato DD/MM/AAAA HH:MM (UTC-5))
-
+•  	PROYECTO
+•  	ARCHIVO (con extensión .gs o .html)
+•  	VERSIÓN (formato XX.YY)
+•  	FECHA (formato DD/MM/AAAA HH:MM (UTC-5))
+ 
 REGLA 10: MOD-002: APERTURA es obligatorio en archivos HTML. Debe contener: DOCTYPE, html, head, body y estructura base del documento.
-
+ 
 REGLA 11: MOD-002: APERTURA es opcional en archivos .GS. Solo crearlo si hay configuración global o código de preparación. Si el archivo empieza con funciones, MOD-002 será la primera función.
-
+ 
 REGLA 12: Si se crea MOD-002: APERTURA, debe existir un MOD-XXX: CÓDIGO DE CIERRE correspondiente que cierre todo lo que se abrió.
-
+ 
 REGLA 13: MOD-YYY: NOTAS debe ser el último módulo del archivo. Debe ser breve y contener solo información crítica.
-
+ 
 REGLA 14: No crear módulos vacíos o que solo contengan tags de apertura/cierre sin contenido funcional.
-
+ 
 REGLAS DE SINTAXIS
-
+ 
 REGLA 15: En archivos .GS, usar exclusivamente sintaxis JavaScript:
-•	Delimitadores: // MOD-XXX:
-•	Comentarios: // y /* */
-
+•  	Delimitadores: // MOD-XXX:
+•  	Comentarios extra: // y /* */ (Nunca usar /* */ con delimitadores)
+ 
 REGLA 16: En archivos .HTML, usar sintaxis HTML para delimitadores:
-•	Delimitadores: <!-- MOD-XXX: -->
-•	Comentarios en HTML: <!-- -->
-•	Comentarios dentro de <script>: // y /* */
-•	Comentarios dentro de <style>: /* */
-
-REGLA 17: NUNCA usar <!-- --> dentro de etiquetas <script> o <style>. Este error causa funciones no definidas y variables inexistentes.
-
+•  	Delimitadores: (La línea de texto que determina el inicio de un MOD y la que determina su fin)
+En código HTML: <!-- MOD-XXX: →
+Dentro de <script>: //
+Dentro de <style>: /* */
+•  	Comentarios extra en el código HTML: <!-- -->
+•  	Comentarios extra dentro de <script>: // y /* / (No usar /* */ para delimitadores)
+•  	Comentarios dentro de <style>:  Solo /* */
+ 
+REGLA 17: NUNCA usar <!-- --> dentro de etiquetas <script> o <style>. Nunca usar // dentro de <style>. Este error causa funciones no definidas y variables inexistentes.
+ 
 REGLA 18: Los bloques <script> y <style> deben estar completamente encapsulados dentro de un módulo, desde la etiqueta de apertura hasta el cierre.
-
+ 
 REGLA 19: El formato de IDs de módulos principales es MOD-XXX donde XXX son tres dígitos: 001, 002, 003.
-
+ 
 REGLA 20: El formato de IDs de submódulos es MOD-XXX-SYY donde XXX es el módulo padre e YY es el número de submódulo: MOD-004-S01, MOD-004-S02.
-
+ 
 REGLA 21: Los submódulos deben numerarse secuencialmente: S01, S02, S03. No usar S1, S2 sin el cero inicial.
-
+ 
 REGLAS DE ERRORES COMUNES
-
+ 
 REGLA 22: No dejar código fuera de módulos. Todo comentario y código vivo debe estar dentro de un MOD-XXX.
-
+ 
 REGLA 23: No usar MOD-XXX en comentarios internos del código. Los identificadores MOD-XXX solo deben usarse en delimitadores de módulos.
-
+ 
 REGLA 24: No omitir [INICIO] en el delimitador de apertura. No omitir FIN en el delimitador de cierre.
-
+ 
 REGLA 25: No mezclar tipos de comentarios incorrectamente. Respetar la sintaxis de cada lenguaje según REGLAS 15-18.
-
+ 
 REGLA 26: No crear módulos con apertura y cierre separados cuando no hay contenido entre ellos. Ejemplo incorrecto:
-
+ 
 <!-- MOD-003: APERTURA CONTAINER [INICIO] -->
 <div class="container">
 <!-- MOD-003: FIN -->
@@ -716,9 +732,9 @@ REGLA 26: No crear módulos con apertura y cierre separados cuando no hay conten
 <!-- MOD-010: CIERRE CONTAINER [INICIO] -->
 </div>
 <!-- MOD-010: FIN -->
-
-
+ 
+ 
 REGLA 27: No extender el módulo de NOTAS con documentación técnica exhaustiva. Mantenerlo breve y puntual.
-
-
-FIN DEL ESTÁNDAR CODEWORKSHOP v4.0
+ 
+ 
+FIN DEL ESTÁNDAR CODEWORKSHOP v5.0
