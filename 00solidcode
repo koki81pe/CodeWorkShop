@@ -1,13 +1,13 @@
 // ============================================
 // SOLID CODE - CODEWORKSHOP
-// Generado: 18/1/2026, 12:24:34 a. m.
-// Total de archivos: 7
+// Generado: 23/1/2026, 11:40:32 a. m.
+// Total de archivos: 4
 // ============================================
 
 
 
 // ============================================
-// ARCHIVO 1/7: code.gs
+// ARCHIVO 1/4: code.gs
 // URL: https://raw.githubusercontent.com/koki81pe/CodeWorkShop/refs/heads/main/code.gs
 // ============================================
 
@@ -16,8 +16,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.20
-FECHA: 17/01/2026 23:59 (UTC-5)
+VERSIÓN: 01.25
+FECHA: 19/01/2026 21:17 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -28,6 +28,8 @@ FECHA: 17/01/2026 23:59 (UTC-5)
  * antes de desplegar la webapp para activar el flujo de autorización
  */
 function forzarPermisos() {
+  const SHEET_ID = '1FsuWVwImc0B-c2H5bxeI8TjEFp-dH-LIFGxyX-t7lZk';
+  
   try {
     DriveApp.getRootFolder().getName();
     Logger.log('✅ Permiso Drive autorizado');
@@ -37,10 +39,23 @@ function forzarPermisos() {
   }
   
   try {
-    SpreadsheetApp.getActiveSpreadsheet();
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const hoja = ss.getSheetByName('Fecha');
+    
+    if (!hoja) {
+      throw new Error('No se encontró la hoja "Fecha"');
+    }
+    
+    const ahora = new Date();
+    const fecha = Utilities.formatDate(ahora, 'America/Lima', 'dd/MM/yyyy HH:mm');
+    
+    hoja.appendRow([fecha]);
+    
     Logger.log('✅ Permiso Spreadsheet autorizado');
+    Logger.log('✅ Fecha registrada: ' + fecha);
   } catch (e) {
-    Logger.log('⚠️ Spreadsheet no disponible (normal si no hay hoja activa)');
+    Logger.log('❌ Error con Spreadsheet: ' + e);
+    throw new Error('Autoriza Spreadsheet y vuelve a ejecutar');
   }
   
   try {
@@ -65,14 +80,6 @@ function forzarPermisos() {
 
 // MOD-003: SERVIR HTML [INICIO]
 function doGet(e) {
-  const page = e.parameter.page || 'index';
-  
-  if (page === 'test') {
-    return HtmlService.createHtmlOutputFromFile('testweb')
-      .setTitle('CodeWorkShop - Tests')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-  
   return HtmlService.createTemplateFromFile('index')
     .evaluate()
     .setTitle('CodeWorkShop')
@@ -89,7 +96,7 @@ function include(filename) {
 // MOD-005: DETECTAR MÓDULOS (AGNÓSTICO) [INICIO]
 /**
  * Detecta si un código contiene delimitadores MOD válidos,
- * sin importar el tipo de comentario (// o <!-- -->).
+ * sin importar el tipo de comentario.
  *
  * No decide tipo de archivo.
  * No impone formato.
@@ -101,12 +108,12 @@ function include(filename) {
 function contieneModulos(codigo) {
   if (!codigo || typeof codigo !== 'string') return false;
 
-  const patronMOD = /(<!--|\/\/)\s*MOD-\d{3}[A-Z]?(-S\d{2}[A-Z]?)?/i;
+  const patronMOD = /(<!--|\/\/|\/\*)\s*MOD-\d{3}[A-Z]?(-S\d{2}[A-Z]?)?/i;
   return patronMOD.test(codigo);
 }
 // MOD-005: FIN
 
-// MOD-006: PARSEAR MÓDULOS (AGNÓSTICO TOTAL v2.3) [INICIO]
+// MOD-006: PARSEAR MÓDULOS (AGNÓSTICO TOTAL v3.0) [INICIO]
 function parsearModulos(codigoCompleto) {
   try {
     if (!codigoCompleto || typeof codigoCompleto !== 'string') {
@@ -119,24 +126,30 @@ function parsearModulos(codigoCompleto) {
     for (let i = 0; i < lineas.length; i++) {
       const linea = lineas[i];
       
+      // 🔹 Detectar 3 tipos de delimitadores
       const matchHTML = linea.match(/^[ \t]*<!--\s*MOD-([0-9]{3}[A-Z]?(?:-S[0-9]{2}[A-Z]?)?):\s*(.+?)\s*\[INICIO\]/i);
       const matchGS = linea.match(/^[ \t]*\/\/\s*MOD-([0-9]{3}[A-Z]?(?:-S[0-9]{2}[A-Z]?)?):\s*(.+?)\s*\[INICIO\]/i);
+      const matchCSS = linea.match(/^[ \t]*\/\*\s*MOD-([0-9]{3}[A-Z]?(?:-S[0-9]{2}[A-Z]?)?):\s*(.+?)\s*\[INICIO\]\s*\*\//i);
       
-      if (!matchHTML && !matchGS) continue;
+      if (!matchHTML && !matchGS && !matchCSS) continue;
       
-      const match = matchHTML || matchGS;
-      const tipoComentario = matchHTML ? '<!--' : '//';
+      const match = matchHTML || matchGS || matchCSS;
+      const tipoComentario = matchHTML ? '<!--' : (matchGS ? '//' : '/*');
       const idSinDospuntos = match[1].trim();
       const id = `MOD-${idSinDospuntos}:`;
       const descripcion = match[2].trim();
       
       const idSeguro = idSinDospuntos.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
       
+      // 🔹 Construir regex de FIN según tipo de comentario
       let finRegex;
       if (tipoComentario === '<!--') {
         finRegex = new RegExp(`MOD-${idSeguro}:\\s*FIN\\s*-->`, 'i');
-      } else {
+      } else if (tipoComentario === '//') {
         finRegex = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*FIN`, 'i');
+      } else {
+        // tipoComentario === '/*'
+        finRegex = new RegExp(`^[ \\t]*\\/\\*\\s*MOD-${idSeguro}:\\s*FIN\\s*\\*\\/`, 'i');
       }
       
       let finEncontrado = false;
@@ -181,7 +194,7 @@ function parsearModulos(codigoCompleto) {
       return idA.localeCompare(idB, undefined, { numeric: true });
     });
 
-    Logger.log(`✅ MOD-006 v2.3: ${unicos.length} módulos detectados`);
+    Logger.log(`✅ MOD-006 v3.0: ${unicos.length} módulos detectados`);
 
     return {
       success: true,
@@ -190,7 +203,7 @@ function parsearModulos(codigoCompleto) {
     };
 
   } catch (error) {
-    Logger.log('❌ Error en MOD-006 v2.3: ' + error.message);
+    Logger.log('❌ Error en MOD-006 v3.0: ' + error.message);
     return { success: false, error: error.message };
   }
 }
@@ -263,7 +276,7 @@ function extraerHeader(codigoCompleto) {
  *
  * @param {string} codigoModulo - Bloque completo del módulo
  * @param {string} idEsperado   - ID con ':' (ej: "MOD-008:", "MOD-004-S01A:")
- * @param {string} tipoEsperado - Tipo de comentario ("<!--" o "//")
+ * @param {string} tipoEsperado - Tipo de comentario (HTML, JS o CSS)
  */
 function validarModulo(codigoModulo, idEsperado, tipoEsperado) {
   try {
@@ -282,55 +295,43 @@ function validarModulo(codigoModulo, idEsperado, tipoEsperado) {
     const id = idEsperado.trim();
     const tipo = tipoEsperado.trim();
 
-    // 🔹 VALIDAR TIPO DE COMENTARIO
-    let tipoDetectado = null;
+    // 🔹 CONSTRUIR PATRONES SEGÚN TIPO ESPERADO
+    const idSinMOD = id.replace('MOD-', '').replace(':', '');
+    const idSeguro = idSinMOD.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     
-    if (codigoModulo.includes('<!-- MOD-')) {
-      tipoDetectado = '<!--';
-    } else if (codigoModulo.includes('// MOD-')) {
-      tipoDetectado = '//';
+    let patronInicio;
+    let patronFin;
+    
+    if (tipo === '<!--') {
+      patronInicio = new RegExp(`^[ \\t]*<!--\\s*MOD-${idSeguro}:.*\\[INICIO\\]`, 'm');
+      patronFin = new RegExp(`^[ \\t]*<!--\\s*MOD-${idSeguro}:\\s*FIN\\s*-->`, 'm');
+    } else if (tipo === '/*') {
+      patronInicio = new RegExp(`^[ \\t]*\\/\\*\\s*MOD-${idSeguro}:.*\\[INICIO\\]\\s*\\*\\/`, 'm');
+      patronFin = new RegExp(`^[ \\t]*\\/\\*\\s*MOD-${idSeguro}:\\s*FIN\\s*\\*\\/`, 'm');
+    } else {
+      // tipo === '//'
+      patronInicio = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:.*\\[INICIO\\]`, 'm');
+      patronFin = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*FIN`, 'm');
     }
 
-    if (!tipoDetectado) {
+    // 🔹 VALIDAR QUE EXISTAN LOS DELIMITADORES
+    if (!patronInicio.test(codigoModulo)) {
       return {
         success: false,
-        error: `No se detectó ningún delimitador MOD válido`
+        error: `Falta delimitador de INICIO correcto en ${id}`
       };
     }
 
-    if (tipoDetectado !== tipo) {
+    if (!patronFin.test(codigoModulo)) {
       return {
         success: false,
-        error: `Tipo de comentario distinto al original (esperado: ${tipo}, encontrado: ${tipoDetectado})`
-      };
-    }
-
-    // 🔹 VALIDAR ESTRUCTURA [INICIO] y FIN
-    const inicioOK =
-      codigoModulo.includes(id) &&
-      codigoModulo.includes('[INICIO]');
-
-    const finOK =
-      codigoModulo.includes(id) &&
-      codigoModulo.includes('FIN');
-
-    if (!inicioOK) {
-      return {
-        success: false,
-        error: `Falta etiqueta [INICIO] en ${id}`
-      };
-    }
-
-    if (!finOK) {
-      return {
-        success: false,
-        error: `Falta etiqueta FIN en ${id}`
+        error: `Falta delimitador de FIN correcto en ${id}`
       };
     }
 
     // 🔹 VALIDAR ORDEN: INICIO antes que FIN
-    const posInicio = codigoModulo.indexOf('[INICIO]');
-    const posFin = codigoModulo.lastIndexOf('FIN');
+    const posInicio = codigoModulo.search(patronInicio);
+    const posFin = codigoModulo.search(patronFin);
 
     if (posInicio > posFin) {
       return {
@@ -342,13 +343,13 @@ function validarModulo(codigoModulo, idEsperado, tipoEsperado) {
     return { success: true };
 
   } catch (error) {
-    Logger.log('❌ Error en validarModulo (MOD-008 v2.0): ' + error.message);
+    Logger.log('❌ Error en validarModulo (MOD-008 v3.2): ' + error.message);
     return { success: false, error: error.message };
   }
 }
 // MOD-008: FIN
 
-// MOD-009: REEMPLAZAR MÓDULO (BLOQUE EXACTO v3.3) [INICIO]
+// MOD-009: REEMPLAZAR MÓDULO (BLOQUE EXACTO v4.0) [INICIO]
 function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
   try {
     if (!codigoCompleto || !idModulo || !nuevoModulo) {
@@ -361,27 +362,32 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
     const idSinDospuntos = idModulo.replace(/^MOD-/, '').replace(/:$/, '');
     const idSeguro = idSinDospuntos.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 
+    // 🔹 Detectar 3 tipos de delimitadores
     const patronHTML = new RegExp(`^[ \\t]*<!--\\s*MOD-${idSeguro}:\\s*`, 'im');
     const patronGS = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*`, 'im');
+    const patronCSS = new RegExp(`^[ \\t]*\\/\\*\\s*MOD-${idSeguro}:\\s*`, 'im');
     
     const esHTML = patronHTML.test(codigoCompleto);
     const esGS = patronGS.test(codigoCompleto);
+    const esCSS = patronCSS.test(codigoCompleto);
     
-    if (!esHTML && !esGS) {
+    if (!esHTML && !esGS && !esCSS) {
       return {
         success: false,
         error: `${idModulo} no encontrado en el código original`
       };
     }
 
-    const tipoOriginal = esHTML ? '<!--' : '//';
+    // 🔹 Determinar tipo original
+    const tipoOriginal = esHTML ? '<!--' : (esGS ? '//' : '/*');
 
     const validacion = validarModulo(nuevoModulo, idModulo, tipoOriginal);
     if (!validacion.success) {
       return validacion;
     }
 
-    const inicioRegex = esHTML ? patronHTML : patronGS;
+    // 🔹 Regex de inicio según tipo
+    const inicioRegex = esHTML ? patronHTML : (esGS ? patronGS : patronCSS);
     const inicioMatch = codigoCompleto.match(inicioRegex);
     
     if (!inicioMatch) {
@@ -393,11 +399,15 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
 
     const inicioPos = inicioMatch.index;
 
+    // 🔹 Regex de FIN según tipo
     let finRegex;
     if (esHTML) {
       finRegex = new RegExp(`MOD-${idSeguro}:\\s*FIN\\s*-->`, 'i');
-    } else {
+    } else if (esGS) {
       finRegex = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*FIN`, 'im');
+    } else {
+      // esCSS
+      finRegex = new RegExp(`^[ \\t]*\\/\\*\\s*MOD-${idSeguro}:\\s*FIN\\s*\\*\\/`, 'im');
     }
 
     const resto = codigoCompleto.slice(inicioPos);
@@ -417,7 +427,7 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
 
     const codigoActualizado = antes + nuevoModulo.trim() + despues;
 
-    Logger.log(`✅ MOD-009 v3.3: ${idModulo} reemplazado exitosamente`);
+    Logger.log(`✅ MOD-009 v4.0: ${idModulo} reemplazado exitosamente`);
 
     return {
       success: true,
@@ -425,7 +435,7 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
     };
 
   } catch (error) {
-    Logger.log('❌ Error en MOD-009 v3.3: ' + error.message);
+    Logger.log('❌ Error en MOD-009 v4.0: ' + error.message);
     return { success: false, error: error.message };
   }
 }
@@ -499,24 +509,8 @@ FECHA: ${nuevaFecha}
   }
 }
 // MOD-010: FIN
-// MOD-011: OBTENER URL DE TESTS [INICIO]
-function obtenerURLTests() {
-  try {
-    const url = ScriptApp.getService().getUrl();
-    if (url) {
-      Logger.log('✅ URL obtenida: ' + url);
-      return url + '?page=test';
-    }
-    Logger.log('❌ ScriptApp.getService().getUrl() devolvió null');
-    return null;
-  } catch (error) {
-    Logger.log('❌ Error al obtener URL: ' + error.message);
-    return null;
-  }
-}
-// MOD-011: FIN
 
-// MOD-012: OBTENER ESTÁNDAR DESDE GOOGLE DOC [INICIO]
+// MOD-011: OBTENER ESTÁNDAR DESDE GOOGLE DOC [INICIO]
 function obtenerEstandar() {
   try {
     const docId = '1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA';
@@ -535,15 +529,15 @@ function obtenerEstandar() {
     return { success: false, error: 'No se pudo leer el documento. Verifica los permisos.' };
   }
 }
-// MOD-012: FIN
+// MOD-011: FIN
 
-// MOD-013: CÓDIGO DE CIERRE [INICIO]
+// MOD-012: CÓDIGO DE CIERRE [INICIO]
 // Sistema iniciado
 Logger.log('✅ CodeWorkShop Backend v01.07 cargado');
 Logger.log('📋 Soporta archivos .GS y .HTML (CodeWorkshop v2.2)');
-// MOD-013: FIN
+// MOD-012: FIN
 
-// MOD-014: ORDENAR Y NORMALIZAR MÓDULOS [INICIO]
+// MOD-013: ORDENAR Y NORMALIZAR MÓDULOS [INICIO]
 /**
  * Ordena módulos y submódulos según estándar CodeWorkShop v2.3
  * Usa metadata generada por MOD-006:
@@ -592,9 +586,87 @@ function ordenarModulos(modulos) {
     return modulos;
   }
 }
+// MOD-013: FIN
+
+// MOD-014: REEMPLAZAR MÚLTIPLES MÓDULOS [INICIO]
+/**
+ * Reemplaza múltiples módulos en un solo paso.
+ * Parsea el texto pegado, detecta módulos y los reemplaza secuencialmente.
+ * 
+ * @param {string} codigoCompleto - Código original completo
+ * @param {string} textoMultiMod - Texto con múltiples módulos a reemplazar
+ * @return {Object} {success, codigo?, error?, modulosReemplazados?}
+ */
+function reemplazarMultiplesModulos(codigoCompleto, textoMultiMod) {
+  try {
+    if (!codigoCompleto || !textoMultiMod) {
+      return {
+        success: false,
+        error: 'Faltan parámetros: código original o módulos a reemplazar'
+      };
+    }
+
+    // 1️⃣ Parsear módulos del textarea Multi MOD
+    const resultadoParseo = parsearModulos(textoMultiMod);
+    
+    if (!resultadoParseo.success) {
+      return {
+        success: false,
+        error: 'No se detectaron módulos válidos en el texto pegado'
+      };
+    }
+    
+    const modulosAPegar = resultadoParseo.modulos;
+    
+    if (modulosAPegar.length === 0) {
+      return {
+        success: false,
+        error: 'No se encontraron módulos para reemplazar'
+      };
+    }
+
+    let codigoActualizado = codigoCompleto;
+    
+    // 2️⃣ Reemplazar cada módulo secuencialmente
+    for (let i = 0; i < modulosAPegar.length; i++) {
+      const mod = modulosAPegar[i];
+      
+      const resultado = reemplazarModulo(
+        codigoActualizado,
+        mod.id,
+        mod.codigo
+      );
+      
+      if (!resultado.success) {
+        return {
+          success: false,
+          error: `Error al reemplazar ${mod.id}: ${resultado.error}`
+        };
+      }
+      
+      codigoActualizado = resultado.codigo;
+    }
+    
+    // 3️⃣ Retornar código final
+    Logger.log(`✅ MOD-014: ${modulosAPegar.length} módulos reemplazados exitosamente`);
+    
+    return {
+      success: true,
+      codigo: codigoActualizado,
+      modulosReemplazados: modulosAPegar.length
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error en MOD-014: ' + error.message);
+    return {
+      success: false,
+      error: 'Error inesperado al procesar múltiples módulos'
+    };
+  }
+}
 // MOD-014: FIN
 
-// MOD-015: NOTAS [INICIO]
+// MOD-099: NOTAS [INICIO]
 /*
 Backend central de CodeWorkShop.
 Responsable de detectar, parsear y reemplazar módulos y submódulos.
@@ -613,19 +685,18 @@ ADVERTENCIAS:
 - El ID del módulo debe conservarse exactamente.
 - Los delimitadores MOD son la única fuente de verdad.
 
-ACTUALIZACIÓN V01.17:
-- Reconocer los mod hijos dentro de script y style en un html.
-- Recordar versión media estable V01.16
+ACTUALIZACIÓN V01.23:
+- MOD-014 Multi MOD
 
 ESTADO:
 ✔ Estable
 ✔ Alineado con CodeWorkshop con hijos y Mods con letras
 */
-// MOD-015: FIN
+// MOD-099: FIN
 
 
 // ============================================
-// ARCHIVO 2/7: index.html
+// ARCHIVO 2/4: index.html
 // URL: https://raw.githubusercontent.com/koki81pe/CodeWorkShop/refs/heads/main/index.html
 // ============================================
 
@@ -634,8 +705,8 @@ ESTADO:
 ******************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: index.html
-VERSIÓN: 01.09
-FECHA: 14/01/2026 16:36 (UTC-5)
+VERSIÓN: 01.11
+FECHA: 18/01/2026 10:34 (UTC-5)
 ******************************************
 -->
 <!-- MOD-001: FIN -->
@@ -671,10 +742,6 @@ FECHA: 14/01/2026 16:36 (UTC-5)
             title="Copia el estándar CodeWorkShop para entrenar IAs">
       📋 Copiar Estándar
     </button>
-    <button class="btn-secondary" onclick="abrirTests()"
-            title="Ir a la página de tests">
-      🧪 Tests
-    </button>
   </div>
 </div>
 <!-- MOD-004: FIN -->
@@ -685,15 +752,25 @@ FECHA: 14/01/2026 16:36 (UTC-5)
   <textarea id="codigoOriginal"
             class="code-area"
             placeholder="Pega aquí tu código con módulos MOD-XXX..."></textarea>
-  <button class="btn-primary" onclick="analizarModulos()">
-    🔍 Analizar Módulos
-  </button>
+  <div class="button-group">
+    <button class="btn-primary" onclick="analizarModulos('modXmod')">
+      🔍 MOD x MOD
+    </button>
+    <button class="btn-primary" onclick="analizarModulos('multiMod')">
+      📦 Multi MOD
+    </button>
+  </div>
 </div>
 <!-- MOD-005: FIN -->
 
 <!-- MOD-006: SECCIÓN LISTA DE MÓDULOS [INICIO] -->
 <div class="section" id="seccionModulos" style="display:none;">
-  <h2>2. Seleccionar Módulo a Modificar</h2>
+  <div class="section-header">
+    <h2>2. Seleccionar Módulo a Modificar</h2>
+    <button class="btn-collapse" id="btnCollapseModulos" onclick="toggleModulos()">
+      ▼
+    </button>
+  </div>
   <div id="listaModulos" class="modulo-list"></div>
 </div>
 <!-- MOD-006: FIN -->
@@ -710,9 +787,21 @@ FECHA: 14/01/2026 16:36 (UTC-5)
 <!-- MOD-008: SECCIÓN NUEVO CÓDIGO [INICIO] -->
 <div class="section" id="seccionNuevoModulo" style="display:none;">
   <h2>4. Nuevo Código del Módulo</h2>
-  <textarea id="nuevoModulo"
-            class="code-area"
-            placeholder="Pega aquí el nuevo código del módulo MOD-XXX..."></textarea>
+  
+  <!-- Textarea para MOD x MOD (modo individual) -->
+  <div id="areaModXMod">
+    <textarea id="nuevoModulo"
+              class="code-area"
+              placeholder="Pega aquí el nuevo código del módulo MOD-XXX..."></textarea>
+  </div>
+  
+  <!-- Textarea para Multi MOD (modo múltiple) -->
+  <div id="areaMultiMod" style="display:none;">
+    <textarea id="multiModulo"
+              class="code-area"
+              placeholder="Pega aquí múltiples módulos MOD-XXX...&#10;&#10;Cada módulo completo con sus delimitadores [INICIO] y FIN."></textarea>
+  </div>
+  
   <button class="btn-primary" onclick="aplicarCambio()">
     ✅ Aplicar Cambio
   </button>
@@ -752,7 +841,7 @@ FECHA: 14/01/2026 16:36 (UTC-5)
 </html>
 <!-- MOD-012: FIN -->
 
-<!-- MOD-013: NOTAS [INICIO] -->
+<!-- MOD-099: NOTAS [INICIO] -->
 <!--
 DESCRIPCIÓN:
 Página principal (contenedor UI) de CodeWorkShop.
@@ -760,12 +849,7 @@ Actúa como esqueleto visual y estructural para la modificación
 modular y jerárquica de código.
 
 ESTÁNDAR:
-- SOPORTE COMPLETO CodeWorkShop v2.3
-- IDs alfanuméricos y jerárquicos:
-  • MOD-004
-  • MOD-004A
-  • MOD-004-S01
-  • MOD-004-S01A
+- SOPORTE COMPLETO CodeWorkShop v3
 
 INTEGRACIÓN CON BACKEND:
 - Compatible con backend code.gs v01.11 / v01.12
@@ -794,16 +878,14 @@ ADVERTENCIAS:
 - NO cambiar includes de style/scripts
 - El reemplazo depende del ID exacto del módulo
 
-ESTADO:
-✔ Coherente con motor jerárquico
-✔ Documentación actualizada
-✔ Seguro para mantenimiento futuro
+ACTUALIZACIÓN:
+- Multi MOD V01.11
 -->
-<!-- MOD-013: FIN -->
+<!-- MOD-099: FIN -->
 
 
 // ============================================
-// ARCHIVO 3/7: scritps.html
+// ARCHIVO 3/4: scritps.html
 // URL: https://raw.githubusercontent.com/koki81pe/CodeWorkShop/refs/heads/main/scritps.html
 // ============================================
 
@@ -812,8 +894,8 @@ ESTADO:
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.15
-FECHA: 17/01/2026 23:18 (UTC-5)
+VERSIÓN: 01.17
+FECHA: 18/01/2026 10:46 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -821,11 +903,12 @@ FECHA: 17/01/2026 23:18 (UTC-5)
 <!-- MOD-002: SCRIPT PRINCIPAL [INICIO] -->
 <script>
 
-  // MOD-002-S01: VARIABLES GLOBALES [INICIO]
-  let codigoOriginal = '';
-  let modulosDetectados = [];
-  let moduloSeleccionado = null;
-  // MOD-002-S01: FIN
+// MOD-002-S01: VARIABLES GLOBALES [INICIO]
+let codigoOriginal = '';
+let modulosDetectados = [];
+let moduloSeleccionado = null;
+let modoEdicion = null; // 'modXmod' o 'multiMod'
+// MOD-002-S01: FIN
 
 
   // MOD-002-S02: UTILIDADES GENERALES [INICIO]
@@ -838,48 +921,50 @@ FECHA: 17/01/2026 23:18 (UTC-5)
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
   }
-
   // MOD-002-S02: FIN
 
 
-  // MOD-002-S03: ANALISIS DE MODULOS [INICIO]
+// MOD-002-S03: ANALISIS DE MODULOS [INICIO]
 
-  function analizarModulos() {
-    const codigo = document.getElementById('codigoOriginal').value;
+function analizarModulos(modo) {
+  const codigo = document.getElementById('codigoOriginal').value;
 
-    if (!codigo.trim()) {
-      mostrarNotificacion('⚠️ Carga un código primero', 'warning');
-      return;
-    }
-
-    mostrarCargando(true);
-
-    google.script.run
-      .withSuccessHandler(res => {
-        mostrarCargando(false);
-
-        if (!res.success) {
-          mostrarNotificacion(res.error, 'error');
-          return;
-        }
-
-        codigoOriginal = codigo;
-        modulosDetectados = res.modulos;
-
-        mostrarModulos(modulosDetectados);
-        mostrarNotificacion(`✅ ${res.modulos.length} MODs detectados`, 'success');
-      })
-      .withFailureHandler(() => {
-        mostrarCargando(false);
-        mostrarNotificacion('❌ Error al analizar', 'error');
-      })
-      .parsearModulos(codigo);
+  if (!codigo.trim()) {
+    mostrarNotificacion('⚠️ Carga un código primero', 'warning');
+    return;
   }
 
-  // MOD-002-S03: FIN
+  // Guardar el modo de edición seleccionado
+  modoEdicion = modo;
 
-<!-- MOD-002-S04: UI – LISTADO Y SELECCION DE MODS [INICIO] -->
+  mostrarCargando(true);
 
+  google.script.run
+    .withSuccessHandler(res => {
+      mostrarCargando(false);
+
+      if (!res.success) {
+        mostrarNotificacion(res.error, 'error');
+        return;
+      }
+
+      codigoOriginal = codigo;
+      modulosDetectados = res.modulos;
+
+      mostrarModulos(modulosDetectados);
+      configurarModoEdicion(modo);
+      mostrarNotificacion(`✅ ${res.modulos.length} MODs detectados`, 'success');
+    })
+    .withFailureHandler(() => {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error al analizar', 'error');
+    })
+    .parsearModulos(codigo);
+}
+
+// MOD-002-S03: FIN
+
+// MOD-002-S04: UI – LISTADO Y SELECCION DE MODS [INICIO]
 function mostrarModulos(modulos) {
   const lista = document.getElementById('listaModulos');
   lista.innerHTML = '';
@@ -893,6 +978,12 @@ function mostrarModulos(modulos) {
   });
 
   document.getElementById('seccionModulos').style.display = 'block';
+  
+  // Asegurar que la lista esté expandida al cargar
+  const listaElement = document.getElementById('listaModulos');
+  const btnCollapse = document.getElementById('btnCollapseModulos');
+  listaElement.classList.remove('collapsed');
+  btnCollapse.textContent = '▼';
 }
 
 function seleccionarModulo(index) {
@@ -912,49 +1003,135 @@ function seleccionarModulo(index) {
   mostrarNotificacion(`ℹ️ ${moduloSeleccionado.id} seleccionado`, 'info');
 }
 
-<!-- MOD-002-S04: FIN -->
+function toggleModulos() {
+  const lista = document.getElementById('listaModulos');
+  const btnCollapse = document.getElementById('btnCollapseModulos');
+  
+  lista.classList.toggle('collapsed');
+  
+  if (lista.classList.contains('collapsed')) {
+    btnCollapse.textContent = '▶';
+  } else {
+    btnCollapse.textContent = '▼';
+  }
+}
 
-  // MOD-002-S05: REEMPLAZO DE MODULOS [INICIO]
+function configurarModoEdicion(modo) {
+  const areaModXMod = document.getElementById('areaModXMod');
+  const areaMultiMod = document.getElementById('areaMultiMod');
+  const seccionActual = document.getElementById('seccionModuloActual');
+  
+  if (modo === 'multiMod') {
+    // Modo Multi MOD: ocultar área individual, mostrar área múltiple
+    areaModXMod.style.display = 'none';
+    areaMultiMod.style.display = 'block';
+    seccionActual.style.display = 'none';
+    
+    // Mostrar sección de nuevo código directamente
+    document.getElementById('seccionNuevoModulo').style.display = 'block';
+  } else {
+    // Modo MOD x MOD: mostrar área individual, ocultar área múltiple
+    areaModXMod.style.display = 'block';
+    areaMultiMod.style.display = 'none';
+    seccionActual.style.display = 'none';
+    
+    // La sección de nuevo código se mostrará al seleccionar un módulo
+  }
+}
+// MOD-002-S04: FIN
 
-  function aplicarCambio() {
-    if (!codigoOriginal || !moduloSeleccionado) {
-      mostrarNotificacion('⚠️ Falta código o módulo', 'warning');
-      return;
-    }
-
-    const nuevoModulo = document.getElementById('nuevoModulo').value;
-    mostrarCargando(true);
-
-    google.script.run
-      .withSuccessHandler(res => {
-        mostrarCargando(false);
-
-        if (!res.success) {
-          mostrarNotificacion(res.error, 'error');
-          return;
-        }
-
-        document.getElementById('codigoResultante').value = res.codigo;
-        document.getElementById('seccionResultado').style.display = 'block';
-
-        mostrarNotificacion('✅ Módulo reemplazado', 'success');
-      })
-      .withFailureHandler(() => {
-        mostrarCargando(false);
-        mostrarNotificacion('❌ Error al aplicar cambio', 'error');
-      })
-      .reemplazarModulo(
-        codigoOriginal,
-        moduloSeleccionado.id,
-        nuevoModulo
-      );
+// MOD-002-S05: REEMPLAZO DE MODULOS [INICIO]
+function aplicarCambio() {
+  if (!codigoOriginal) {
+    mostrarNotificacion('⚠️ Falta código original', 'warning');
+    return;
   }
 
-  // MOD-002-S05: FIN
+  // Detectar el modo y ejecutar la función correspondiente
+  if (modoEdicion === 'multiMod') {
+    aplicarCambioMultiple();
+  } else {
+    aplicarCambioIndividual();
+  }
+}
+
+function aplicarCambioIndividual() {
+  if (!moduloSeleccionado) {
+    mostrarNotificacion('⚠️ Selecciona un módulo primero', 'warning');
+    return;
+  }
+
+  const nuevoModulo = document.getElementById('nuevoModulo').value;
+  
+  if (!nuevoModulo.trim()) {
+    mostrarNotificacion('⚠️ Pega el nuevo código del módulo', 'warning');
+    return;
+  }
+
+  mostrarCargando(true);
+
+  google.script.run
+    .withSuccessHandler(res => {
+      mostrarCargando(false);
+
+      if (!res.success) {
+        mostrarNotificacion(res.error, 'error');
+        return;
+      }
+
+      document.getElementById('codigoResultante').value = res.codigo;
+      document.getElementById('seccionResultado').style.display = 'block';
+
+      mostrarNotificacion('✅ Módulo reemplazado', 'success');
+    })
+    .withFailureHandler(() => {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error al aplicar cambio', 'error');
+    })
+    .reemplazarModulo(
+      codigoOriginal,
+      moduloSeleccionado.id,
+      nuevoModulo
+    );
+}
+
+function aplicarCambioMultiple() {
+  const multiModulo = document.getElementById('multiModulo').value;
+  
+  if (!multiModulo.trim()) {
+    mostrarNotificacion('⚠️ Pega los módulos a reemplazar', 'warning');
+    return;
+  }
+
+  mostrarCargando(true);
+
+  google.script.run
+    .withSuccessHandler(res => {
+      mostrarCargando(false);
+
+      if (!res.success) {
+        mostrarNotificacion(res.error, 'error');
+        return;
+      }
+
+      document.getElementById('codigoResultante').value = res.codigo;
+      document.getElementById('seccionResultado').style.display = 'block';
+
+      mostrarNotificacion(`✅ ${res.modulosReemplazados} módulos reemplazados`, 'success');
+    })
+    .withFailureHandler(() => {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error al aplicar cambios múltiples', 'error');
+    })
+    .reemplazarMultiplesModulos(
+      codigoOriginal,
+      multiModulo
+    );
+}
+// MOD-002-S05: FIN
 
 
   // MOD-002-S06: UTILIDADES UI [INICIO]
-
   function copiarResultado() {
     navigator.clipboard.writeText(
       document.getElementById('codigoResultante').value
@@ -979,12 +1156,10 @@ function seleccionarModulo(index) {
       .getElementById('loading')
       .classList.toggle('show', show);
   }
-
   // MOD-002-S06: FIN
 
 
-  // MOD-002-S07: ACCIONES DE HEADER [INICIO]
-
+// MOD-002-S07: ACCIONES DE HEADER [INICIO]
   function copiarUrlPdfEstandar() {
     const urlPdf =
       'https://docs.google.com/document/d/1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA/export?format=pdf';
@@ -1018,28 +1193,6 @@ function seleccionarModulo(index) {
       })
       .obtenerEstandar();
   }
-
-  function abrirTests() {
-    google.script.run
-      .withSuccessHandler(url => {
-        if (url) {
-          window.open(url, '_blank');
-        } else {
-          mostrarNotificacion(
-            '❌ No se pudo obtener la URL de Tests',
-            'error'
-          );
-        }
-      })
-      .withFailureHandler(() => {
-        mostrarNotificacion(
-          '❌ Error al abrir Tests',
-          'error'
-        );
-      })
-      .obtenerURLTests();
-  }
-
   // MOD-002-S07: FIN
 
 
@@ -1050,7 +1203,7 @@ function seleccionarModulo(index) {
 </script>
 <!-- MOD-002: FIN -->
 
-<!-- MOD-003: NOTAS [INICIO] -->
+<!-- MOD-099: NOTAS [INICIO] -->
 <!--
 scripts.html NO analiza código.
 scripts.html NO modifica MODs.
@@ -1062,11 +1215,11 @@ Código remodulado con hijos en el script v01.14
 Toda la lógica vive en:
 - code.gs (MOD-006, MOD-008, MOD-009)
 -->
-<!-- MOD-003: FIN -->
+<!-- MOD-099: FIN -->
 
 
 // ============================================
-// ARCHIVO 4/7: style.html
+// ARCHIVO 4/4: style.html
 // URL: https://raw.githubusercontent.com/koki81pe/CodeWorkShop/refs/heads/main/style.html
 // ============================================
 
@@ -1075,8 +1228,8 @@ Toda la lógica vive en:
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: style.html
-VERSIÓN: 01.09
-FECHA: 17/01/2026 23:42 (UTC-5)
+VERSIÓN: 01.11
+FECHA: 18/01/2026 10:49 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -1182,9 +1335,9 @@ body {
 // MOD-002-S05: ÁREA DE CÓDIGO [INICIO]
 .code-area {
   width: 100%;
-  height: calc(100vh - 250px);
-  min-height: 200px;
-  max-height: 600px;
+  height: 200px;
+  min-height: 150px;
+  max-height: 400px;
   padding: 12px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-primary);
@@ -1193,6 +1346,7 @@ body {
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 13px;
   resize: vertical;
+  line-height: 1.5;
 }
 
 .code-area:focus {
@@ -1222,6 +1376,18 @@ button {
   border: 1px solid var(--border-primary);
 }
 
+.button-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.button-group button {
+  flex: 1;
+  min-width: 150px;
+}
+
 @media (hover: hover) {
   .btn-primary:hover {
     background: var(--accent-green-hover);
@@ -1235,10 +1401,48 @@ button {
 // MOD-002-S06: FIN
 
 // MOD-002-S07: LISTA DE MÓDULOS [INICIO]
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+.btn-collapse {
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s;
+  min-width: 40px;
+}
+
+.btn-collapse:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent-blue);
+}
+
 .modulo-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.modulo-list.collapsed {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
 }
 
 .modulo-item {
@@ -1346,7 +1550,7 @@ button {
 </style>
 <!-- MOD-002: FIN -->
 
-<!-- MOD-003: NOTAS [INICIO] -->
+<!-- MOD-099: NOTAS [INICIO] -->
 <!--
 DESCRIPCIÓN:
 Estilos CSS de CodeWorkShop alineados a estándar v2.3.
@@ -1364,900 +1568,11 @@ COMPATIBILIDAD:
 ESTADO:
 ✔ Alineado 100% con CodeWorkShop v2.3
 -->
-<!-- MOD-003: FIN -->
-
-
-// ============================================
-// ARCHIVO 5/7: testback.gs
-// URL: https://raw.githubusercontent.com/koki81pe/CodeWorkShop/refs/heads/main/testback.gs
-// ============================================
-
-/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║ PROYECTO: CodeWorkShop                                   ║
- * ║ ARCHIVO: testback.gs                                     ║
- * ║ VERSIÓN: 1.0.1                                          ║
- * ║ FECHA: 09/01/2026 15:30 (UTC-5)                         ║
- * ╚══════════════════════════════════════════════════════════╝
- */
-
-// MOD-001: EJECUTAR TODOS LOS TESTS [INICIO]
-function allBack() {
-  limpiarTests();
-  
-  try {
-    DriveApp.getRootFolder();
-  } catch (e) {
-    return 'ERROR: Se requieren permisos. Ejecuta forzarPermisos() primero.';
-  }
-  
-  const logs = [];
-  logs.push('═══════════════════════════════');
-  logs.push('TESTS DEL BACKEND');
-  logs.push('═══════════════════════════════\n');
-  
-  logs.push(...testParsearModulos());
-  logs.push(...testExtraerHeader());
-  logs.push(...testValidarModulo());
-  logs.push(...testReemplazarModulo());
-  
-  logs.push('\n═══════════════════════════════');
-  logs.push('RESUMEN');
-  logs.push('═══════════════════════════════');
-  
-  const total = logs.filter(l => l.includes('✅') || l.includes('❌')).length;
-  const exitosos = logs.filter(l => l.includes('✅')).length;
-  const fallidos = logs.filter(l => l.includes('❌')).length;
-  
-  logs.push(`Total: ${total} | Exitosos: ${exitosos} | Fallidos: ${fallidos}`);
-  
-  return logs.join('\n');
-}
-// MOD-001: FIN
-
-// MOD-002: LIMPIAR TESTS [INICIO]
-function limpiarTests() {
-  Logger.log('Tests limpios - sin datos persistentes');
-}
-// MOD-002: FIN
-
-// MOD-003: TEST PARSEAR MÓDULOS [INICIO]
-function testParsearModulos() {
-  const logs = [];
-  logs.push('TEST 1: Parsear Módulos');
-  logs.push('------------------------');
-  
-  const codigoPrueba = `/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║ PROYECTO: Test                                           ║
- * ║ ARCHIVO: test.gs                                         ║
- * ║ VERSIÓN: 1.0.0                                          ║
- * ║ FECHA: 09/01/2026 15:00 (UTC-5)                         ║
- * ╚══════════════════════════════════════════════════════════╝
- */
-
-// MOD-001: FUNCIÓN A [INICIO]
-function funcionA() {
-  return "A";
-}
-// MOD-001: FIN
-
-// MOD-002: FUNCIÓN B [INICIO]
-function funcionB() {
-  return "B";
-}
-// MOD-002: FIN`;
-
-  try {
-    const resultado = parsearModulos(codigoPrueba);
-    
-    if (resultado.success && resultado.modulos.length === 2) {
-      logs.push('✅ Detecta módulos correctamente');
-      logs.push('   - Módulos encontrados: ' + resultado.modulos.length);
-      logs.push('   - MOD-001: ' + resultado.modulos[0].descripcion);
-      logs.push('   - MOD-002: ' + resultado.modulos[1].descripcion);
-    } else {
-      logs.push('❌ Error al detectar módulos');
-      logs.push('   - Esperado: 2 módulos');
-      logs.push('   - Obtenido: ' + (resultado.modulos ? resultado.modulos.length : 0));
-    }
-  } catch (error) {
-    logs.push('❌ Excepción: ' + error.message);
-  }
-  
-  logs.push('');
-  return logs;
-}
-// MOD-003: FIN
-
-// MOD-004: TEST EXTRAER HEADER [INICIO]
-function testExtraerHeader() {
-  const logs = [];
-  logs.push('TEST 2: Extraer Header');
-  logs.push('------------------------');
-  
-  const codigoPrueba = `/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║ PROYECTO: MiProyecto                                     ║
- * ║ ARCHIVO: codigo.gs                                       ║
- * ║ VERSIÓN: 2.1.5                                          ║
- * ║ FECHA: 09/01/2026 14:30 (UTC-5)                         ║
- * ╚══════════════════════════════════════════════════════════╝
- */`;
-
-  try {
-    const resultado = extraerHeader(codigoPrueba);
-    
-    if (resultado.success) {
-      const h = resultado.header;
-      if (h.proyecto === 'MiProyecto' && h.version === '2.1.5') {
-        logs.push('✅ Header extraído correctamente');
-        logs.push('   - Proyecto: ' + h.proyecto);
-        logs.push('   - Archivo: ' + h.archivo);
-        logs.push('   - Versión: ' + h.version);
-      } else {
-        logs.push('❌ Datos del header incorrectos');
-      }
-    } else {
-      logs.push('❌ No se pudo extraer header');
-      logs.push('   - Error: ' + resultado.error);
-    }
-  } catch (error) {
-    logs.push('❌ Excepción: ' + error.message);
-  }
-  
-  logs.push('');
-  return logs;
-}
-// MOD-004: FIN
-
-// MOD-005: TEST VALIDAR MÓDULO [INICIO]
-function testValidarModulo() {
-  const logs = [];
-  logs.push('TEST 3: Validar Módulo');
-  logs.push('------------------------');
-  
-  const moduloValido = `// MOD-003: TEST VÁLIDO [INICIO]
-function test() {
-  return true;
-}
-// MOD-003: FIN`;
-
-  const moduloInvalido = `// MOD-003: TEST INVÁLIDO [INICIO]
-function test() {
-  return false;
-}`;
-
-  try {
-    const resultado1 = validarModulo(moduloValido, '003');
-    const resultado2 = validarModulo(moduloInvalido, '003');
-    
-    if (resultado1.success && !resultado2.success) {
-      logs.push('✅ Validación funciona correctamente');
-      logs.push('   - Módulo válido: PASS');
-      logs.push('   - Módulo inválido: FAIL (esperado)');
-    } else {
-      logs.push('❌ Error en validación');
-    }
-  } catch (error) {
-    logs.push('❌ Excepción: ' + error.message);
-  }
-  
-  logs.push('');
-  return logs;
-}
-// MOD-005: FIN
-
-// MOD-006: TEST REEMPLAZAR MÓDULO [INICIO]
-function testReemplazarModulo() {
-  const logs = [];
-  logs.push('TEST 4: Reemplazar Módulo');
-  logs.push('------------------------');
-  
-  const codigoOriginal = `/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║ PROYECTO: Test                                           ║
- * ║ ARCHIVO: test.gs                                         ║
- * ║ VERSIÓN: 1.0.0                                          ║
- * ║ FECHA: 09/01/2026 15:00 (UTC-5)                         ║
- * ╚══════════════════════════════════════════════════════════╝
- */
-
-// MOD-001: FUNCIÓN ORIGINAL [INICIO]
-function funcionOriginal() {
-  return "original";
-}
-// MOD-001: FIN`;
-
-  const nuevoModulo = `// MOD-001: FUNCIÓN ORIGINAL [INICIO]
-function funcionOriginal() {
-  return "modificado";
-}
-// MOD-001: FIN`;
-
-  try {
-    const resultado = reemplazarModulo(codigoOriginal, '001', nuevoModulo);
-    
-    if (resultado.success && resultado.codigo.includes('modificado')) {
-      logs.push('✅ Reemplazo exitoso');
-      logs.push('   - Código actualizado correctamente');
-      logs.push('   - Versión incrementada');
-    } else {
-      logs.push('❌ Error en reemplazo');
-      if (resultado.error) {
-        logs.push('   - Error: ' + resultado.error);
-      }
-    }
-  } catch (error) {
-    logs.push('❌ Excepción: ' + error.message);
-  }
-  
-  logs.push('');
-  return logs;
-}
-// MOD-006: FIN
-
-
-// ============================================
-// ARCHIVO 6/7: testfront.gs
-// URL: https://raw.githubusercontent.com/koki81pe/CodeWorkShop/refs/heads/main/testfront.gs
-// ============================================
-
-/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║ PROYECTO: CodeWorkShop                                   ║
- * ║ ARCHIVO: testfront.gs                                    ║
- * ║ VERSIÓN: 1.0.1                                          ║
- * ║ FECHA: 09/01/2026 15:30 (UTC-5)                         ║
- * ╚══════════════════════════════════════════════════════════╝
- */
-
-// MOD-001: EJECUTAR TODOS LOS TESTS UI [INICIO]
-function allFront() {
-  limpiarTests();
-  
-  const logs = [];
-  logs.push('═══════════════════════════════');
-  logs.push('TESTS DEL FRONTEND');
-  logs.push('═══════════════════════════════\n');
-  
-  logs.push(...testSimularCarga());
-  logs.push(...testSimularAnalisis());
-  logs.push(...testSimularValidacion());
-  
-  logs.push('\n═══════════════════════════════');
-  logs.push('RESUMEN');
-  logs.push('═══════════════════════════════');
-  
-  const total = logs.filter(l => l.includes('✅') || l.includes('❌')).length;
-  const exitosos = logs.filter(l => l.includes('✅')).length;
-  const fallidos = logs.filter(l => l.includes('❌')).length;
-  
-  logs.push(`Total: ${total} | Exitosos: ${exitosos} | Fallidos: ${fallidos}`);
-  
-  return logs.join('\n');
-}
-// MOD-001: FIN
-
-// MOD-002: TEST SIMULAR CARGA [INICIO]
-function testSimularCarga() {
-  const logs = [];
-  logs.push('TEST UI-1: Simular Carga de Código');
-  logs.push('-----------------------------------');
-  
-  try {
-    const codigoPrueba = `/**
- * ╔══════════════════════════════════════════════════════════╗
- * ║ PROYECTO: Test UI                                        ║
- * ║ ARCHIVO: test.gs                                         ║
- * ║ VERSIÓN: 1.0.0                                          ║
- * ║ FECHA: 09/01/2026 15:00 (UTC-5)                         ║
- * ╚══════════════════════════════════════════════════════════╝
- */
-
-// MOD-001: FUNCIÓN TEST [INICIO]
-function test() {
-  return true;
-}
-// MOD-001: FIN`;
-
-    if (codigoPrueba.length > 0) {
-      logs.push('✅ Carga de código simulada');
-      logs.push('   - Caracteres: ' + codigoPrueba.length);
-      logs.push('   - Contiene header: ' + (codigoPrueba.includes('PROYECTO:') ? 'Sí' : 'No'));
-      logs.push('   - Contiene módulos: ' + (codigoPrueba.includes('MOD-') ? 'Sí' : 'No'));
-    } else {
-      logs.push('❌ Error al simular carga');
-    }
-  } catch (error) {
-    logs.push('❌ Excepción: ' + error.message);
-  }
-  
-  logs.push('');
-  return logs;
-}
-// MOD-002: FIN
-
-// MOD-003: TEST SIMULAR ANÁLISIS [INICIO]
-function testSimularAnalisis() {
-  const logs = [];
-  logs.push('TEST UI-2: Simular Análisis');
-  logs.push('-----------------------------------');
-  
-  const codigoPrueba = `// MOD-001: TEST A [INICIO]
-function a() {}
-// MOD-001: FIN
-
-// MOD-002: TEST B [INICIO]
-function b() {}
-// MOD-002: FIN`;
-
-  try {
-    const resultado = parsearModulos(codigoPrueba);
-    
-    if (resultado.success) {
-      logs.push('✅ Análisis ejecutado correctamente');
-      logs.push('   - Módulos detectados: ' + resultado.modulos.length);
-      logs.push('   - Puede mostrar en lista: Sí');
-    } else {
-      logs.push('❌ Error en análisis');
-      logs.push('   - Error: ' + resultado.error);
-    }
-  } catch (error) {
-    logs.push('❌ Excepción: ' + error.message);
-  }
-  
-  logs.push('');
-  return logs;
-}
-// MOD-003: FIN
-
-// MOD-004: TEST SIMULAR VALIDACIÓN [INICIO]
-function testSimularValidacion() {
-  const logs = [];
-  logs.push('TEST UI-3: Simular Validación');
-  logs.push('-----------------------------------');
-  
-  try {
-    const checks = [];
-    
-    const codigoOriginal = '// código existe';
-    checks.push(codigoOriginal ? 'Código original' : null);
-    
-    const moduloSeleccionado = '001';
-    checks.push(moduloSeleccionado ? 'Módulo seleccionado' : null);
-    
-    const nuevoCodigo = '// MOD-001: TEST [INICIO]\n// MOD-001: FIN';
-    checks.push(nuevoCodigo.trim() ? 'Nuevo código' : null);
-    
-    const validas = checks.filter(c => c !== null).length;
-    
-    if (validas === 3) {
-      logs.push('✅ Validación frontend correcta');
-      logs.push('   - Código original: OK');
-      logs.push('   - Módulo seleccionado: OK');
-      logs.push('   - Nuevo código: OK');
-    } else {
-      logs.push('❌ Validación incompleta');
-      logs.push('   - Checks válidos: ' + validas + '/3');
-    }
-  } catch (error) {
-    logs.push('❌ Excepción: ' + error.message);
-  }
-  
-  logs.push('');
-  return logs;
-}
-// MOD-004: FIN
-
-
-// ============================================
-// ARCHIVO 7/7: testweb.html
-// URL: https://raw.githubusercontent.com/koki81pe/CodeWorkShop/refs/heads/main/testweb.html
-// ============================================
-
-<!DOCTYPE html>
-<!--
-╔══════════════════════════════════════════════════════════╗
-║  PROYECTO: CodeWorkShop                                  ║
-║  ARCHIVO:  testweb.html                                  ║
-║  VERSIÓN:  1.1.0                                         ║
-║  FECHA:    10/01/2026 01:30 (UTC-5)                      ║
-╚══════════════════════════════════════════════════════════╝
--->
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CodeWorkShop - Tests</title>
-  
-  <!-- MOD-001: ESTILOS CSS [INICIO] -->
-  <style>
-    :root {
-      --bg-primary: #0d1117;
-      --bg-secondary: #161b22;
-      --bg-tertiary: #21262d;
-      --border-primary: #30363d;
-      --text-primary: #c9d1d9;
-      --text-secondary: #8b949e;
-      --accent-blue: #58a6ff;
-      --accent-green: #238636;
-      --success: #238636;
-      --error: #da3633;
-    }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      padding: 20px;
-      line-height: 1.6;
-    }
-    
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    
-    h1 {
-      font-size: 28px;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .subtitle {
-      color: var(--text-secondary);
-      font-size: 14px;
-      margin-bottom: 24px;
-    }
-    
-    .test-controls {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-    
-    button {
-      padding: 10px 20px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-    
-    button.primary {
-      background: var(--accent-green);
-      color: white;
-    }
-    
-    button.secondary {
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-      border: 1px solid var(--border-primary);
-    }
-    
-    button:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
-    
-    button:active {
-      transform: translateY(0);
-    }
-    
-    .log-container {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-primary);
-      border-radius: 6px;
-      padding: 20px;
-      min-height: 400px;
-    }
-    
-    #logs {
-      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-      font-size: 13px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      color: var(--text-primary);
-      line-height: 1.6;
-    }
-    
-    .loading {
-      display: none;
-      text-align: center;
-      padding: 20px;
-      color: var(--text-secondary);
-    }
-    
-    .loading.show {
-      display: block;
-    }
-    
-    .spinner {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 2px solid var(--border-primary);
-      border-top-color: var(--accent-blue);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    
-    .toast {
-      position: fixed;
-      bottom: -100px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-      padding: 12px 24px;
-      border-radius: 6px;
-      border: 1px solid var(--border-primary);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-      transition: bottom 0.3s;
-      z-index: 10000;
-      font-size: 14px;
-    }
-    
-    .toast.show {
-      bottom: 24px;
-    }
-    
-    .toast.success {
-      border-color: var(--success);
-      background: rgba(35, 134, 54, 0.1);
-    }
-    
-    @media (max-width: 768px) {
-      .test-controls {
-        flex-direction: column;
-      }
-      
-      button {
-        width: 100%;
-      }
-    }
-  </style>
-  <!-- MOD-001: FIN -->
-</head>
-<body>
-  <!-- MOD-002: ESTRUCTURA HTML [INICIO] -->
-  <div class="container">
-    <h1>🧪 CodeWorkShop - Tests</h1>
-    <p class="subtitle">Pruebas de Backend, Frontend y Logs de Consola</p>
-    
-    <div class="test-controls">
-      <!-- Tests programados -->
-      <button class="primary" onclick="runBackendTests()">
-        🔄 Test Backend
-      </button>
-      <button class="primary" onclick="runFrontendTests()">
-        🔄 Test Frontend
-      </button>
-      
-      <!-- Captura de logs -->
-      <button class="secondary" onclick="captureConsoleLogs()">
-        🐛 Logs Consola
-      </button>
-      <button class="secondary" onclick="runFullDebug()">
-        🔍 Debug Completo
-      </button>
-      
-      <!-- Utilidades -->
-      <button class="secondary" onclick="clearLogs()">
-        🗑️ Limpiar
-      </button>
-      <button class="secondary" onclick="copyLogs()">
-        📋 Copiar
-      </button>
-    </div>
-    
-    <div class="log-container">
-      <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <p>Ejecutando tests...</p>
-      </div>
-      <pre id="logs">Presiona un botón para ejecutar tests...</pre>
-    </div>
-    
-    <div id="toast" class="toast"></div>
-  </div>
-  <!-- MOD-002: FIN -->
-  
-  <script>
-    // MOD-003: CAPTURA DE LOGS DE CONSOLA [INICIO]
-    const consoleLogs = [];
-    
-    const originalLog = console.log;
-    console.log = function(...args) {
-      consoleLogs.push({
-        type: 'log',
-        timestamp: new Date().toISOString(),
-        message: args.map(arg => 
-          typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-        ).join(' ')
-      });
-      originalLog.apply(console, args);
-    };
-    
-    const originalError = console.error;
-    console.error = function(...args) {
-      consoleLogs.push({
-        type: 'error',
-        timestamp: new Date().toISOString(),
-        message: args.map(arg => String(arg)).join(' ')
-      });
-      originalError.apply(console, args);
-    };
-    
-    const originalWarn = console.warn;
-    console.warn = function(...args) {
-      consoleLogs.push({
-        type: 'warn',
-        timestamp: new Date().toISOString(),
-        message: args.map(arg => String(arg)).join(' ')
-      });
-      originalWarn.apply(console, args);
-    };
-    // MOD-003: FIN
-    
-    // MOD-004: TEST BACKEND [INICIO]
-    function runBackendTests() {
-      showLoading(true);
-      clearLogs();
-      console.log('Ejecutando tests del backend...');
-      
-      google.script.run
-        .withSuccessHandler(function(resultado) {
-          showLoading(false);
-          document.getElementById('logs').textContent = resultado;
-          showToast('✅ Tests del Backend completados');
-          console.log('Tests backend completados');
-        })
-        .withFailureHandler(function(error) {
-          showLoading(false);
-          document.getElementById('logs').textContent = 'ERROR: ' + error.message;
-          showToast('❌ Error al ejecutar tests');
-          console.error('Error en tests backend:', error);
-        })
-        .allBack();
-    }
-    // MOD-004: FIN
-    
-    // MOD-005: TEST FRONTEND [INICIO]
-    function runFrontendTests() {
-      showLoading(true);
-      clearLogs();
-      console.log('Ejecutando tests del frontend...');
-      
-      google.script.run
-        .withSuccessHandler(function(resultado) {
-          showLoading(false);
-          document.getElementById('logs').textContent = resultado;
-          showToast('✅ Tests del Frontend completados');
-          console.log('Tests frontend completados');
-        })
-        .withFailureHandler(function(error) {
-          showLoading(false);
-          document.getElementById('logs').textContent = 'ERROR: ' + error.message;
-          showToast('❌ Error al ejecutar tests');
-          console.error('Error en tests frontend:', error);
-        })
-        .allFront();
-    }
-    // MOD-005: FIN
-    
-    // MOD-006: CAPTURAR LOGS CONSOLA [INICIO]
-    function captureConsoleLogs() {
-      showLoading(true);
-      clearLogs();
-      
-      setTimeout(() => {
-        showLoading(false);
-        
-        if (consoleLogs.length === 0) {
-          document.getElementById('logs').textContent = 'No hay logs capturados en esta sesión.\n\nLos logs se capturan desde que se carga esta página.\nEjecuta tests o interactúa con la app principal para generar logs.';
-          showToast('⚠️ Sin logs capturados');
-          return;
-        }
-        
-        let output = '═══════════════════════════════\n';
-        output += 'LOGS DE CONSOLA DEL NAVEGADOR\n';
-        output += '═══════════════════════════════\n\n';
-        
-        consoleLogs.forEach((log, index) => {
-          const icon = log.type === 'error' ? '❌' : 
-                       log.type === 'warn' ? '⚠️' : 'ℹ️';
-          output += `${icon} [${log.timestamp}] ${log.type.toUpperCase()}\n`;
-          output += `   ${log.message}\n\n`;
-        });
-        
-        output += `\nTotal de logs: ${consoleLogs.length}`;
-        
-        document.getElementById('logs').textContent = output;
-        showToast('✅ Logs de consola capturados');
-      }, 500);
-    }
-    // MOD-006: FIN
-    
-    // MOD-007: DEBUG COMPLETO [INICIO]
-    function runFullDebug() {
-      showLoading(true);
-      clearLogs();
-      
-      setTimeout(() => {
-        showLoading(false);
-        
-        let output = '╔════════════════════════════════════════════════════╗\n';
-        output += '║  DEBUG COMPLETO - CodeWorkShop                     ║\n';
-        output += '╚════════════════════════════════════════════════════╝\n\n';
-        
-        output += '🌐 NAVEGADOR\n';
-        output += '─────────────────────────────\n';
-        output += `User Agent: ${navigator.userAgent}\n`;
-        output += `Idioma: ${navigator.language}\n`;
-        output += `Plataforma: ${navigator.platform}\n`;
-        output += `Cookies: ${navigator.cookieEnabled ? 'Habilitadas' : 'Deshabilitadas'}\n`;
-        output += `Online: ${navigator.onLine ? 'Sí' : 'No'}\n\n`;
-        
-        output += '🖥️  VENTANA\n';
-        output += '─────────────────────────────\n';
-        output += `Tamaño: ${window.innerWidth}x${window.innerHeight}\n`;
-        output += `URL actual: ${window.location.href}\n`;
-        output += `URL origen: ${window.location.origin}\n`;
-        output += `Pathname: ${window.location.pathname}\n`;
-        output += `Parámetros: ${window.location.search || 'ninguno'}\n`;
-        output += `Protocolo: ${window.location.protocol}\n\n`;
-        
-        output += '📋 LOGS DE CONSOLA\n';
-        output += '─────────────────────────────\n';
-        if (consoleLogs.length === 0) {
-          output += 'Sin logs capturados\n\n';
-        } else {
-          output += `Total: ${consoleLogs.length} logs\n`;
-          output += `Errores: ${consoleLogs.filter(l => l.type === 'error').length}\n`;
-          output += `Warnings: ${consoleLogs.filter(l => l.type === 'warn').length}\n`;
-          output += `Info: ${consoleLogs.filter(l => l.type === 'log').length}\n\n`;
-          
-          output += 'Últimos 10 logs:\n';
-          consoleLogs.slice(-10).forEach(log => {
-            const icon = log.type === 'error' ? '❌' : 
-                         log.type === 'warn' ? '⚠️' : 'ℹ️';
-            const preview = log.message.length > 60 ? 
-              log.message.substring(0, 60) + '...' : 
-              log.message;
-            output += `${icon} ${preview}\n`;
-          });
-          output += '\n';
-        }
-        
-        output += '⚡ PERFORMANCE\n';
-        output += '─────────────────────────────\n';
-        if (window.performance && window.performance.memory) {
-          const memory = window.performance.memory;
-          output += `Memoria JS usada: ${(memory.usedJSHeapSize / 1048576).toFixed(2)} MB\n`;
-          output += `Límite memoria JS: ${(memory.jsHeapSizeLimit / 1048576).toFixed(2)} MB\n`;
-          output += `Porcentaje usado: ${((memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100).toFixed(1)}%\n`;
-        } else {
-          output += 'Info de memoria no disponible en este navegador\n';
-        }
-        
-        if (window.performance && window.performance.timing) {
-          const timing = window.performance.timing;
-          const loadTime = timing.loadEventEnd - timing.navigationStart;
-          if (loadTime > 0) {
-            output += `Tiempo de carga: ${loadTime}ms\n`;
-          }
-        }
-        
-        output += '\n═══════════════════════════════\n';
-        output += 'Para más detalles, usa F12 y revisa la pestaña Console\n';
-        
-        document.getElementById('logs').textContent = output;
-        showToast('✅ Debug completo generado');
-      }, 500);
-    }
-    // MOD-007: FIN
-    
-    // MOD-008: LIMPIAR LOGS [INICIO]
-    function clearLogs() {
-      document.getElementById('logs').textContent = 'Logs limpios. Presiona un botón para ejecutar tests...';
-    }
-    // MOD-008: FIN
-    
-    // MOD-009: COPIAR LOGS [INICIO]
-    function copyLogs() {
-      const logs = document.getElementById('logs').textContent;
-      
-      if (logs.includes('Presiona un botón') || logs.includes('Logs limpios')) {
-        showToast('⚠️ No hay logs para copiar');
-        return;
-      }
-      
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(logs)
-          .then(() => {
-            showToast('✅ Logs copiados al portapapeles');
-          })
-          .catch(() => {
-            copyLogsFallback();
-          });
-      } else {
-        copyLogsFallback();
-      }
-    }
-    
-    function copyLogsFallback() {
-      const textarea = document.createElement('textarea');
-      const logs = document.getElementById('logs').textContent;
-      textarea.value = logs;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      
-      try {
-        document.execCommand('copy');
-        showToast('✅ Logs copiados al portapapeles');
-      } catch (err) {
-        showToast('❌ No se pudo copiar');
-        console.error('Error al copiar:', err);
-      } finally {
-        document.body.removeChild(textarea);
-      }
-    }
-    // MOD-009: FIN
-    
-    // MOD-010: MOSTRAR LOADING [INICIO]
-    function showLoading(show) {
-      const loading = document.getElementById('loading');
-      if (show) {
-        loading.classList.add('show');
-        document.getElementById('logs').style.display = 'none';
-      } else {
-        loading.classList.remove('show');
-        document.getElementById('logs').style.display = 'block';
-      }
-    }
-    // MOD-010: FIN
-    
-    // MOD-011: MOSTRAR TOAST [INICIO]
-    function showToast(mensaje) {
-      const toast = document.getElementById('toast');
-      toast.textContent = mensaje;
-      toast.classList.add('show');
-      
-      setTimeout(() => {
-        toast.classList.remove('show');
-      }, 3000);
-    }
-    // MOD-011: FIN
-    
-    // MOD-012: INICIALIZACIÓN [INICIO]
-    console.log('CodeWorkShop Tests cargado correctamente');
-    // MOD-012: FIN
-  </script>
-</body>
-</html>
+<!-- MOD-099: FIN -->
 
 
 // ============================================
 // FIN DEL SOLID CODE
-// Tamaño total: 61,682 caracteres
-// Archivos exitosos: 7/7
+// Tamaño total: 41,421 caracteres
+// Archivos exitosos: 4/4
 // ============================================
