@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.17
-FECHA: 18/01/2026 10:46 (UTC-5)
+VERSIÓN: 01.19
+FECHA: 24/01/2026 07:31 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -33,7 +33,7 @@ let modoEdicion = null; // 'modXmod' o 'multiMod'
   // MOD-002-S02: FIN
 
 
-// MOD-002-S03: ANALISIS DE MODULOS [INICIO]
+// MOD-002-S03: ANALISIS DE MODULOS V2 [INICIO]
 
 function analizarModulos(modo) {
   const codigo = document.getElementById('codigoOriginal').value;
@@ -62,7 +62,16 @@ function analizarModulos(modo) {
 
       mostrarModulos(modulosDetectados);
       configurarModoEdicion(modo);
-      mostrarNotificacion(`✅ ${res.modulos.length} MODs detectados`, 'success');
+      
+      // 🆕 MOSTRAR ESTADÍSTICAS
+      if (res.estadisticas) {
+        const stats = res.estadisticas;
+        const mensaje = `✅ Detectados: ${stats.total} MOD = ${stats.padres} MOD + ${stats.hijos} SubMOD`;
+        mostrarNotificacion(mensaje, 'success');
+      } else {
+        // Fallback si no hay estadísticas
+        mostrarNotificacion(`✅ ${res.modulos.length} MODs detectados`, 'success');
+      }
     })
     .withFailureHandler(() => {
       mostrarCargando(false);
@@ -73,7 +82,7 @@ function analizarModulos(modo) {
 
 // MOD-002-S03: FIN
 
-// MOD-002-S04: UI – LISTADO Y SELECCION DE MODS [INICIO]
+// MOD-002-S04: UI – LISTADO Y SELECCION DE MODS V2 [INICIO]
 function mostrarModulos(modulos) {
   const lista = document.getElementById('listaModulos');
   lista.innerHTML = '';
@@ -82,7 +91,11 @@ function mostrarModulos(modulos) {
     const item = document.createElement('div');
     item.className = 'modulo-item';
     item.onclick = () => seleccionarModulo(index);
-    item.textContent = `${mod.id} ${mod.descripcion}`;
+    
+    // 🆕 MOSTRAR LÍNEAS AL LADO DE LA DESCRIPCIÓN
+    const textoLineas = mod.lineas ? ` (${mod.lineas} líneas)` : '';
+    item.textContent = `${mod.id} ${mod.descripcion}${textoLineas}`;
+    
     lista.appendChild(item);
   });
 
@@ -240,32 +253,33 @@ function aplicarCambioMultiple() {
 // MOD-002-S05: FIN
 
 
-  // MOD-002-S06: UTILIDADES UI [INICIO]
-  function copiarResultado() {
-    navigator.clipboard.writeText(
-      document.getElementById('codigoResultante').value
-    );
-  }
+// MOD-002-S06: UTILIDADES UI V2 [INICIO]
+function copiarResultado() {
+  navigator.clipboard.writeText(
+    document.getElementById('codigoResultante').value
+  );
+  mostrarNotificacion('✅ Código copiado al portapapeles', 'success');
+}
 
-  function reiniciar() {
-    codigoOriginal = '';
-    modulosDetectados = [];
-    moduloSeleccionado = null;
-  }
+function reiniciar() {
+  codigoOriginal = '';
+  modulosDetectados = [];
+  moduloSeleccionado = null;
+}
 
-  function mostrarNotificacion(msg, tipo = 'success') {
-    const toast = document.getElementById('toast');
-    toast.className = `toast ${tipo} show`;
-    toast.textContent = msg;
-    setTimeout(() => toast.className = 'toast', 3000);
-  }
+function mostrarNotificacion(msg, tipo = 'success') {
+  const toast = document.getElementById('toast');
+  toast.className = `toast ${tipo} show`;
+  toast.textContent = msg;
+  setTimeout(() => toast.className = 'toast', 3000);
+}
 
-  function mostrarCargando(show) {
-    document
-      .getElementById('loading')
-      .classList.toggle('show', show);
-  }
-  // MOD-002-S06: FIN
+function mostrarCargando(show) {
+  document
+    .getElementById('loading')
+    .classList.toggle('show', show);
+}
+// MOD-002-S06: FIN
 
 
 // MOD-002-S07: ACCIONES DE HEADER [INICIO]
@@ -314,14 +328,26 @@ function aplicarCambioMultiple() {
 
 <!-- MOD-099: NOTAS [INICIO] -->
 <!--
-scripts.html NO analiza código.
-scripts.html NO modifica MODs.
-scripts.html SOLO muestra y envía texto crudo.
+DESCRIPCIÓN:
+Frontend de CodeWorkShop. Captura código, envía al backend y muestra resultados.
 
-Actualización:
-Código remodulado con hijos en el script v01.14
+RESPONSABILIDAD:
+- Captura código del usuario
+- Envía a code.gs para procesamiento
+- Muestra resultados y estadísticas
+- Gestiona UI de modo MOD x MOD y Multi MOD
 
-Toda la lógica vive en:
-- code.gs (MOD-006, MOD-008, MOD-009)
+ACTUALIZACIÓN V01.19:
+- MOD-002-S03: Muestra estadísticas (total MOD, padres, hijos)
+- MOD-002-S04 V2: Muestra conteo de líneas por módulo
+
+INTEGRACIÓN:
+Backend code.gs v01.29:
+- MOD-006 v7.0: Detección ultra agnóstica + conteo de líneas
+- MOD-008 v4.0: Validación dinámica
+- MOD-009 v6.0: Reemplazo ultra agnóstico
+
+ESTADO:
+Compatible con backend ultra agnóstico v01.29
 -->
 <!-- MOD-099: FIN -->
