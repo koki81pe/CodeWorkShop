@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.25
-FECHA: 19/01/2026 21:17 (UTC-5)
+VERSIÓN: 01.29
+FECHA: 24/01/2026 01:24 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -100,7 +100,27 @@ function contieneModulos(codigo) {
 }
 // MOD-005: FIN
 
-// MOD-006: PARSEAR MÓDULOS (AGNÓSTICO TOTAL v3.0) [INICIO]
+// MOD-006: PARSEAR MÓDULOS V7 [INICIO]
+/**
+ * Parsea módulos de forma completamente agnóstica al lenguaje.
+ * Detecta cualquier símbolo de comentario dinámicamente.
+ * 
+ * FILOSOFÍA:
+ * - Herramienta quirúrgica, NO auditor
+ * - Detecta módulos válidos, ignora el resto
+ * - Si el usuario pega basura, es su problema
+ * 
+ * NOVEDADES V7:
+ * - Incluye conteo de líneas por módulo (incluyendo delimitadores)
+ * 
+ * RETORNA:
+ * {
+ *   success: boolean,
+ *   modulos: Array,
+ *   estadisticas: { total, padres, hijos },
+ *   error?: string
+ * }
+ */
 function parsearModulos(codigoCompleto) {
   try {
     if (!codigoCompleto || typeof codigoCompleto !== 'string') {
@@ -110,41 +130,28 @@ function parsearModulos(codigoCompleto) {
     const modulos = [];
     const lineas = codigoCompleto.split('\n');
 
+    // 🔹 PASO 1: Detectar todos los módulos
     for (let i = 0; i < lineas.length; i++) {
       const linea = lineas[i];
       
-      // 🔹 Detectar 3 tipos de delimitadores
-      const matchHTML = linea.match(/^[ \t]*<!--\s*MOD-([0-9]{3}[A-Z]?(?:-S[0-9]{2}[A-Z]?)?):\s*(.+?)\s*\[INICIO\]/i);
-      const matchGS = linea.match(/^[ \t]*\/\/\s*MOD-([0-9]{3}[A-Z]?(?:-S[0-9]{2}[A-Z]?)?):\s*(.+?)\s*\[INICIO\]/i);
-      const matchCSS = linea.match(/^[ \t]*\/\*\s*MOD-([0-9]{3}[A-Z]?(?:-S[0-9]{2}[A-Z]?)?):\s*(.+?)\s*\[INICIO\]\s*\*\//i);
+      // Detectar apertura de módulo
+      const apertura = detectarApertura(linea);
       
-      if (!matchHTML && !matchGS && !matchCSS) continue;
+      if (!apertura) continue;
       
-      const match = matchHTML || matchGS || matchCSS;
-      const tipoComentario = matchHTML ? '<!--' : (matchGS ? '//' : '/*');
-      const idSinDospuntos = match[1].trim();
-      const id = `MOD-${idSinDospuntos}:`;
-      const descripcion = match[2].trim();
+      // Construir patrón de cierre esperado
+      const cierreEsperado = construirCierre(apertura);
       
-      const idSeguro = idSinDospuntos.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      
-      // 🔹 Construir regex de FIN según tipo de comentario
-      let finRegex;
-      if (tipoComentario === '<!--') {
-        finRegex = new RegExp(`MOD-${idSeguro}:\\s*FIN\\s*-->`, 'i');
-      } else if (tipoComentario === '//') {
-        finRegex = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*FIN`, 'i');
-      } else {
-        // tipoComentario === '/*'
-        finRegex = new RegExp(`^[ \\t]*\\/\\*\\s*MOD-${idSeguro}:\\s*FIN\\s*\\*\\/`, 'i');
-      }
-      
+      // Buscar el cierre
       let finEncontrado = false;
       let codigoBloque = linea + '\n';
       
       for (let j = i + 1; j < lineas.length; j++) {
-        codigoBloque += lineas[j] + '\n';
-        if (finRegex.test(lineas[j])) {
+        const lineaCierre = lineas[j];
+        codigoBloque += lineaCierre + '\n';
+        
+        // Comparar ignorando espacios iniciales
+        if (lineaCierre.trim() === cierreEsperado.trim()) {
           finEncontrado = true;
           break;
         }
@@ -153,10 +160,12 @@ function parsearModulos(codigoCompleto) {
       if (!finEncontrado) continue;
       
       modulos.push({
-        id: id,
-        tipo: tipoComentario,
-        descripcion: descripcion,
-        codigo: codigoBloque.trim()
+        id: apertura.id,
+        prefijo: apertura.prefijo,
+        sufijo: apertura.sufijo,
+        descripcion: apertura.descripcion,
+        codigo: codigoBloque.trim(),
+        lineas: codigoBloque.split('\n').length  // 🆕 CONTEO DE LÍNEAS
       });
     }
 
@@ -164,35 +173,136 @@ function parsearModulos(codigoCompleto) {
       return { success: false, error: 'No se detectaron MODs' };
     }
 
-    const unicos = [];
-    const vistos = new Set();
+    // 🔹 PASO 2: Eliminar duplicados
+    const unicos = eliminarDuplicados(modulos);
 
-    modulos.forEach(m => {
-      const key = m.id + '|' + m.codigo.length;
-      if (!vistos.has(key)) {
-        vistos.add(key);
-        unicos.push(m);
-      }
-    });
-
+    // 🔹 PASO 3: Ordenar naturalmente
     unicos.sort((a, b) => {
       const idA = a.id.replace(/-/g, '~');
       const idB = b.id.replace(/-/g, '~');
       return idA.localeCompare(idB, undefined, { numeric: true });
     });
 
-    Logger.log(`✅ MOD-006 v3.0: ${unicos.length} módulos detectados`);
+    // 🔹 PASO 4: Calcular estadísticas
+    const estadisticas = calcularEstadisticas(unicos);
+
+    Logger.log(`✅ MOD-006 v7.0: ${estadisticas.total} módulos (${estadisticas.padres} MOD + ${estadisticas.hijos} SubMOD)`);
 
     return {
       success: true,
       modulos: unicos,
-      tipo: 'plano'
+      estadisticas: estadisticas
     };
 
   } catch (error) {
-    Logger.log('❌ Error en MOD-006 v3.0: ' + error.message);
+    Logger.log('❌ Error en MOD-006 v7.0: ' + error.message);
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * Detecta si una línea contiene un delimitador de apertura válido.
+ * 
+ * REGLAS:
+ * - Debe contener "MOD-" en mayúsculas
+ * - Debe contener ":" después del ID
+ * - Debe contener "[INICIO]" en mayúsculas
+ * - Debe haber 1 espacio entre prefijo y "MOD-"
+ * - Debe haber 1 espacio entre "[INICIO]" y sufijo (si hay sufijo)
+ * - Ignora espacios/tabs al inicio de la línea
+ */
+function detectarApertura(linea) {
+  // Ignorar espacios iniciales para la detección
+  const lineaTrimIzq = linea.trimStart();
+  
+  // Buscar palabras clave en MAYÚSCULAS
+  const posMOD = lineaTrimIzq.indexOf('MOD-');
+  if (posMOD === -1) return null;
+  
+  const posINICIO = lineaTrimIzq.indexOf('[INICIO]', posMOD);
+  if (posINICIO === -1) return null;
+  
+  const posDospuntos = lineaTrimIzq.indexOf(':', posMOD);
+  if (posDospuntos === -1 || posDospuntos > posINICIO) return null;
+  
+  // 🔹 Validar que "MOD" esté en mayúsculas
+  if (lineaTrimIzq.substring(posMOD, posMOD + 4) !== 'MOD-') return null;
+  
+  // 🔹 Validar que "[INICIO]" esté en mayúsculas
+  if (lineaTrimIzq.substring(posINICIO, posINICIO + 8) !== '[INICIO]') return null;
+  
+  // 🔹 Extraer componentes
+  const prefijo = lineaTrimIzq.substring(0, posMOD);
+  const idCompleto = lineaTrimIzq.substring(posMOD, posDospuntos + 1);
+  const textoDescripcion = lineaTrimIzq.substring(posDospuntos + 1, posINICIO);
+  const sufijo = lineaTrimIzq.substring(posINICIO + 8); // 8 = length de "[INICIO]"
+  
+  // 🔹 Validar espaciado correcto
+  // Debe haber 1 espacio entre prefijo y MOD (si hay prefijo)
+  if (prefijo !== '' && !prefijo.endsWith(' ')) return null;
+  
+  // Debe haber 1 espacio entre [INICIO] y sufijo (si hay sufijo)
+  if (sufijo !== '' && !sufijo.startsWith(' ')) return null;
+  
+  // 🔹 Limpiar la descripción (puede tener espacios antes de [INICIO])
+  const descripcion = textoDescripcion.trim();
+  
+  return {
+    prefijo: prefijo,
+    id: idCompleto,
+    descripcion: descripcion,
+    sufijo: sufijo
+  };
+}
+
+/**
+ * Construye el patrón de cierre esperado dado un delimitador de apertura.
+ * 
+ * FORMATO:
+ * prefijo + id + " FIN" + sufijo
+ */
+function construirCierre(apertura) {
+  return apertura.prefijo + apertura.id + ' FIN' + apertura.sufijo;
+}
+
+/**
+ * Elimina módulos duplicados usando Set.
+ * Criterio: mismo ID + misma longitud de código
+ */
+function eliminarDuplicados(modulos) {
+  const unicos = [];
+  const vistos = new Set();
+  
+  modulos.forEach(m => {
+    const key = m.id + '|' + m.codigo.length;
+    if (!vistos.has(key)) {
+      vistos.add(key);
+      unicos.push(m);
+    }
+  });
+  
+  return unicos;
+}
+
+/**
+ * Calcula estadísticas de módulos detectados.
+ * 
+ * RETORNA:
+ * {
+ *   total: número total de módulos,
+ *   padres: módulos principales (sin -S),
+ *   hijos: submódulos (con -S)
+ * }
+ */
+function calcularEstadisticas(modulos) {
+  const padres = modulos.filter(m => !m.id.includes('-S'));
+  const hijos = modulos.filter(m => m.id.includes('-S'));
+  
+  return {
+    total: modulos.length,
+    padres: padres.length,
+    hijos: hijos.length
+  };
 }
 // MOD-006: FIN
 
@@ -255,24 +365,27 @@ function extraerHeader(codigoCompleto) {
 }
 // MOD-007: FIN
 
-// MOD-008: VALIDAR MÓDULO [INICIO]
+// MOD-008: VALIDAR MÓDULO V3 [INICIO]
 /**
- * Valida que un módulo conserve correctamente
- * sus delimitadores MOD-[ID] [INICIO] y MOD-[ID] FIN
- * y que use el tipo de comentario correcto.
+ * Valida que un módulo conserve correctamente sus delimitadores.
+ * Versión ultra agnóstica: no asume tipo de comentario.
+ *
+ * VALIDACIONES:
+ * - Delimitador de INICIO presente y correcto
+ * - Delimitador de FIN presente y correcto
+ * - Los símbolos (prefijo y sufijo) coinciden entre INICIO y FIN
+ * - El ID coincide exactamente
+ * - INICIO aparece antes que FIN
  *
  * @param {string} codigoModulo - Bloque completo del módulo
- * @param {string} idEsperado   - ID con ':' (ej: "MOD-008:", "MOD-004-S01A:")
- * @param {string} tipoEsperado - Tipo de comentario (HTML, JS o CSS)
+ * @param {string} idEsperado   - ID con ':' (ej: "MOD-008:", "MOD-004-S01:")
+ * @param {string} prefijoEsperado - Símbolos antes de MOD (ej: "// ", "<!-- ")
+ * @param {string} sufijoEsperado - Símbolos después de [INICIO]/FIN (ej: "", " -->")
+ * @return {Object} {success: boolean, error?: string}
  */
-function validarModulo(codigoModulo, idEsperado, tipoEsperado) {
+function validarModulo(codigoModulo, idEsperado, prefijoEsperado, sufijoEsperado) {
   try {
-    if (
-      !codigoModulo ||
-      typeof codigoModulo !== 'string' ||
-      !idEsperado ||
-      !tipoEsperado
-    ) {
+    if (!codigoModulo || typeof codigoModulo !== 'string' || !idEsperado) {
       return {
         success: false,
         error: 'Parámetros inválidos en validarModulo'
@@ -280,47 +393,54 @@ function validarModulo(codigoModulo, idEsperado, tipoEsperado) {
     }
 
     const id = idEsperado.trim();
-    const tipo = tipoEsperado.trim();
+    const prefijo = prefijoEsperado || '';
+    const sufijo = sufijoEsperado || '';
 
-    // 🔹 CONSTRUIR PATRONES SEGÚN TIPO ESPERADO
-    const idSinMOD = id.replace('MOD-', '').replace(':', '');
-    const idSeguro = idSinMOD.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    // 🔹 Buscar los delimitadores en el código
+    const lineas = codigoModulo.split('\n');
     
-    let patronInicio;
-    let patronFin;
-    
-    if (tipo === '<!--') {
-      patronInicio = new RegExp(`^[ \\t]*<!--\\s*MOD-${idSeguro}:.*\\[INICIO\\]`, 'm');
-      patronFin = new RegExp(`^[ \\t]*<!--\\s*MOD-${idSeguro}:\\s*FIN\\s*-->`, 'm');
-    } else if (tipo === '/*') {
-      patronInicio = new RegExp(`^[ \\t]*\\/\\*\\s*MOD-${idSeguro}:.*\\[INICIO\\]\\s*\\*\\/`, 'm');
-      patronFin = new RegExp(`^[ \\t]*\\/\\*\\s*MOD-${idSeguro}:\\s*FIN\\s*\\*\\/`, 'm');
-    } else {
-      // tipo === '//'
-      patronInicio = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:.*\\[INICIO\\]`, 'm');
-      patronFin = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*FIN`, 'm');
+    let encontradoInicio = false;
+    let encontradoFin = false;
+    let posLineaInicio = -1;
+    let posLineaFin = -1;
+
+    for (let i = 0; i < lineas.length; i++) {
+      const lineaTrim = lineas[i].trim();
+      
+      // 🆕 VALIDAR INICIO: prefijo + id + cualquier cosa + [INICIO] + sufijo
+      if (lineaTrim.startsWith(prefijo.trim()) && 
+          lineaTrim.includes(id) && 
+          lineaTrim.includes('[INICIO]') &&
+          lineaTrim.endsWith(sufijo.trim())) {
+        encontradoInicio = true;
+        posLineaInicio = i;
+      }
+      
+      // 🆕 VALIDAR FIN: prefijo + id + FIN + sufijo
+      const patronFinEsperado = (prefijo + id + ' FIN' + sufijo).trim();
+      if (lineaTrim === patronFinEsperado) {
+        encontradoFin = true;
+        posLineaFin = i;
+      }
     }
 
-    // 🔹 VALIDAR QUE EXISTAN LOS DELIMITADORES
-    if (!patronInicio.test(codigoModulo)) {
+    // 🔹 VALIDAR que existan ambos delimitadores
+    if (!encontradoInicio) {
       return {
         success: false,
         error: `Falta delimitador de INICIO correcto en ${id}`
       };
     }
 
-    if (!patronFin.test(codigoModulo)) {
+    if (!encontradoFin) {
       return {
         success: false,
         error: `Falta delimitador de FIN correcto en ${id}`
       };
     }
 
-    // 🔹 VALIDAR ORDEN: INICIO antes que FIN
-    const posInicio = codigoModulo.search(patronInicio);
-    const posFin = codigoModulo.search(patronFin);
-
-    if (posInicio > posFin) {
+    // 🔹 VALIDAR orden: INICIO antes que FIN
+    if (posLineaInicio >= posLineaFin) {
       return {
         success: false,
         error: `Orden incorrecto: FIN antes de INICIO en ${id}`
@@ -330,13 +450,28 @@ function validarModulo(codigoModulo, idEsperado, tipoEsperado) {
     return { success: true };
 
   } catch (error) {
-    Logger.log('❌ Error en validarModulo (MOD-008 v3.2): ' + error.message);
+    Logger.log('❌ Error en validarModulo (MOD-008 v4.0): ' + error.message);
     return { success: false, error: error.message };
   }
 }
 // MOD-008: FIN
 
-// MOD-009: REEMPLAZAR MÓDULO (BLOQUE EXACTO v4.0) [INICIO]
+// MOD-009: REEMPLAZAR MÓDULO V6 [INICIO]
+/**
+ * Reemplaza un módulo en el código original de forma completamente agnóstica.
+ * Detecta dinámicamente el prefijo y sufijo del módulo original.
+ * 
+ * PROCESO:
+ * 1. Buscar el módulo en el código original
+ * 2. Extraer su prefijo y sufijo
+ * 3. Validar que el nuevo módulo use los mismos símbolos
+ * 4. Reemplazar el bloque exacto
+ * 
+ * @param {string} codigoCompleto - Código original completo
+ * @param {string} idModulo - ID del módulo a reemplazar (ej: "MOD-009:")
+ * @param {string} nuevoModulo - Nuevo código del módulo completo
+ * @return {Object} {success: boolean, codigo?: string, error?: string}
+ */
 function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
   try {
     if (!codigoCompleto || !idModulo || !nuevoModulo) {
@@ -346,75 +481,43 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
       };
     }
 
-    const idSinDospuntos = idModulo.replace(/^MOD-/, '').replace(/:$/, '');
-    const idSeguro = idSinDospuntos.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-
-    // 🔹 Detectar 3 tipos de delimitadores
-    const patronHTML = new RegExp(`^[ \\t]*<!--\\s*MOD-${idSeguro}:\\s*`, 'im');
-    const patronGS = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*`, 'im');
-    const patronCSS = new RegExp(`^[ \\t]*\\/\\*\\s*MOD-${idSeguro}:\\s*`, 'im');
+    // 🔹 PASO 1: Buscar el módulo original en el código
+    const moduloOriginal = buscarModuloOriginal(codigoCompleto, idModulo);
     
-    const esHTML = patronHTML.test(codigoCompleto);
-    const esGS = patronGS.test(codigoCompleto);
-    const esCSS = patronCSS.test(codigoCompleto);
-    
-    if (!esHTML && !esGS && !esCSS) {
+    if (!moduloOriginal.success) {
       return {
         success: false,
         error: `${idModulo} no encontrado en el código original`
       };
     }
 
-    // 🔹 Determinar tipo original
-    const tipoOriginal = esHTML ? '<!--' : (esGS ? '//' : '/*');
+    // 🔹 PASO 2: Extraer prefijo y sufijo del módulo original
+    const prefijo = moduloOriginal.prefijo;
+    const sufijo = moduloOriginal.sufijo;
 
-    const validacion = validarModulo(nuevoModulo, idModulo, tipoOriginal);
+    // 🔹 PASO 3: Validar que el nuevo módulo use los mismos símbolos
+    const validacion = validarModulo(nuevoModulo, idModulo, prefijo, sufijo);
+    
     if (!validacion.success) {
       return validacion;
     }
 
-    // 🔹 Regex de inicio según tipo
-    const inicioRegex = esHTML ? patronHTML : (esGS ? patronGS : patronCSS);
-    const inicioMatch = codigoCompleto.match(inicioRegex);
+    // 🔹 PASO 4: Encontrar posición exacta del módulo original
+    const posiciones = encontrarPosicionModulo(codigoCompleto, idModulo, prefijo, sufijo);
     
-    if (!inicioMatch) {
+    if (!posiciones.success) {
       return {
         success: false,
-        error: `${idModulo} no encontrado (marca de inicio)`
+        error: `No se pudo localizar ${idModulo} en el código`
       };
     }
 
-    const inicioPos = inicioMatch.index;
-
-    // 🔹 Regex de FIN según tipo
-    let finRegex;
-    if (esHTML) {
-      finRegex = new RegExp(`MOD-${idSeguro}:\\s*FIN\\s*-->`, 'i');
-    } else if (esGS) {
-      finRegex = new RegExp(`^[ \\t]*\\/\\/\\s*MOD-${idSeguro}:\\s*FIN`, 'im');
-    } else {
-      // esCSS
-      finRegex = new RegExp(`^[ \\t]*\\/\\*\\s*MOD-${idSeguro}:\\s*FIN\\s*\\*\\/`, 'im');
-    }
-
-    const resto = codigoCompleto.slice(inicioPos);
-    const finMatch = resto.match(finRegex);
-
-    if (!finMatch) {
-      return {
-        success: false,
-        error: `${idModulo} no encontrado (marca de fin)`
-      };
-    }
-
-    const finReal = inicioPos + finMatch.index + finMatch[0].length;
-
-    const antes = codigoCompleto.slice(0, inicioPos);
-    const despues = codigoCompleto.slice(finReal);
-
+    // 🔹 PASO 5: Reemplazar el bloque exacto
+    const antes = codigoCompleto.substring(0, posiciones.inicio);
+    const despues = codigoCompleto.substring(posiciones.fin);
     const codigoActualizado = antes + nuevoModulo.trim() + despues;
 
-    Logger.log(`✅ MOD-009 v4.0: ${idModulo} reemplazado exitosamente`);
+    Logger.log(`✅ MOD-009 v6.0: ${idModulo} reemplazado exitosamente`);
 
     return {
       success: true,
@@ -422,9 +525,114 @@ function reemplazarModulo(codigoCompleto, idModulo, nuevoModulo) {
     };
 
   } catch (error) {
-    Logger.log('❌ Error en MOD-009 v4.0: ' + error.message);
+    Logger.log('❌ Error en MOD-009 v6.0: ' + error.message);
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * Busca un módulo en el código y extrae su información.
+ * 
+ * @param {string} codigo - Código completo donde buscar
+ * @param {string} idModulo - ID del módulo (ej: "MOD-009:")
+ * @return {Object} {success, prefijo?, sufijo?, error?}
+ */
+function buscarModuloOriginal(codigo, idModulo) {
+  const lineas = codigo.split('\n');
+  
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i];
+    const lineaTrim = linea.trimStart();
+    
+    // Buscar línea que contenga el ID + [INICIO]
+    const posID = lineaTrim.indexOf(idModulo);
+    if (posID === -1) continue;
+    
+    const posINICIO = lineaTrim.indexOf('[INICIO]', posID);
+    if (posINICIO === -1) continue;
+    
+    // Extraer prefijo y sufijo
+    const prefijo = lineaTrim.substring(0, posID);
+    const sufijo = lineaTrim.substring(posINICIO + 8); // 8 = length("[INICIO]")
+    
+    return {
+      success: true,
+      prefijo: prefijo,
+      sufijo: sufijo
+    };
+  }
+  
+  return {
+    success: false,
+    error: 'Módulo no encontrado'
+  };
+}
+
+/**
+ * Encuentra la posición exacta (inicio y fin) de un módulo en el código.
+ * Búsqueda flexible: tolera descripciones variables en el delimitador de INICIO.
+ * 
+ * @param {string} codigo - Código completo
+ * @param {string} idModulo - ID del módulo
+ * @param {string} prefijo - Prefijo del delimitador
+ * @param {string} sufijo - Sufijo del delimitador
+ * @return {Object} {success, inicio?, fin?, error?}
+ */
+function encontrarPosicionModulo(codigo, idModulo, prefijo, sufijo) {
+  const lineas = codigo.split('\n');
+  
+  const patronFin = (prefijo + idModulo + ' FIN' + sufijo).trim();
+  
+  let posicionInicio = -1;
+  let posicionFin = -1;
+  let caracterInicio = 0;
+  let caracterFin = 0;
+  
+  // 🆕 Buscar línea de inicio (FLEXIBLE con descripción)
+  for (let i = 0; i < lineas.length; i++) {
+    const lineaTrim = lineas[i].trim();
+    
+    // Verificar que la línea contenga todos los elementos clave
+    if (lineaTrim.startsWith(prefijo.trim()) && 
+        lineaTrim.includes(idModulo) && 
+        lineaTrim.includes('[INICIO]') &&
+        lineaTrim.endsWith(sufijo.trim())) {
+      posicionInicio = i;
+      break;
+    }
+    caracterInicio += lineas[i].length + 1; // +1 por el \n
+  }
+  
+  if (posicionInicio === -1) {
+    return {
+      success: false,
+      error: 'No se encontró la línea de INICIO'
+    };
+  }
+  
+  // Buscar línea de fin (EXACTA)
+  caracterFin = caracterInicio;
+  for (let i = posicionInicio; i < lineas.length; i++) {
+    if (lineas[i].trim() === patronFin) {
+      posicionFin = i;
+      caracterFin += lineas[i].length; // Incluir la línea completa de FIN
+      break;
+    }
+    caracterFin += lineas[i].length + 1; // +1 por el \n
+  }
+  
+  if (posicionFin === -1) {
+    return {
+      success: false,
+      error: 'No se encontró la línea de FIN'
+    };
+  }
+  
+  return {
+    success: true,
+    inicio: caracterInicio,
+    fin: caracterFin
+  };
 }
 // MOD-009: FIN
 
@@ -659,24 +867,49 @@ Backend central de CodeWorkShop.
 Responsable de detectar, parsear y reemplazar módulos y submódulos.
 
 CAPACIDADES CLAVE:
-- Soporta MODs y SubMODs jerárquicos (IDs alfanuméricos).
-- Detecta módulos usando patrones MOD-XXX y MOD-XXX-SYY.
-- Independiente del tipo de comentario (// o <!-- -->).
+- 🆕 ULTRA AGNÓSTICO: Detecta módulos con cualquier símbolo de comentario
+- Soporta MODs y SubMODs jerárquicos (IDs alfanuméricos)
+- Detecta dinámicamente prefijo y sufijo de delimitadores
+- Validación estricta: rechaza código con texto sin modular
+- Estadísticas automáticas: cuenta MODs principales y SubMODs
 
 FUNCIONES CRÍTICAS:
-- parsearModulos()
-- reemplazarModulo()
-- validarModulo()
+- parsearModulos() v4.0 - Detección ultra agnóstica
+- validarModulo() v4.0 - Validación por prefijo/sufijo
+- reemplazarModulo() v5.0 - Reemplazo ultra agnóstico
+
+FUNCIONES AUXILIARES:
+- detectarApertura() - Detecta delimitador de INICIO dinámicamente
+- construirCierre() - Construye patrón de FIN esperado
+- validarTextoModulado() - Rechaza código sin modular
+- eliminarDuplicados() - Elimina MODs duplicados
+- calcularEstadisticas() - Cuenta MODs y SubMODs
+- buscarModuloOriginal() - Extrae prefijo/sufijo del código original
+- encontrarPosicionModulo() - Localiza posición exacta para reemplazo
+
+REGLAS DE DELIMITADORES:
+- Formato apertura: [prefijo] + MOD-XXX: + [descripción] + [INICIO] + [sufijo]
+- Formato cierre: [prefijo] + MOD-XXX: + FIN + [sufijo]
+- Prefijo y sufijo deben coincidir 100% entre apertura y cierre
+- Espacios iniciales de línea se ignoran en detección
+- MOD, [INICIO] y FIN deben estar en MAYÚSCULAS
 
 ADVERTENCIAS:
-- El ID del módulo debe conservarse exactamente.
-- Los delimitadores MOD son la única fuente de verdad.
+- El ID del módulo debe conservarse exactamente
+- Los delimitadores MOD son la única fuente de verdad
+- SubMODs mal escritos se ignoran (se tratan como contenido del padre)
+- Código sin modular genera error y rechaza todo el bloque
 
-ACTUALIZACIÓN V01.23:
-- MOD-014 Multi MOD
+ACTUALIZACIÓN V01.26 (Ultra Agnóstico):
+- MOD-006 v4.0: Detección ultra agnóstica de módulos
+- MOD-008 v4.0: Validación por prefijo/sufijo dinámico
+- MOD-009 v5.0: Reemplazo ultra agnóstico
+- MOD-014: Multi MOD compatible con ultra agnóstico
 
 ESTADO:
-✔ Estable
-✔ Alineado con CodeWorkshop con hijos y Mods con letras
+✔ Ultra Agnóstico - Soporta cualquier lenguaje de programación
+✔ Validación estricta de código sin modular
+✔ Estadísticas automáticas (MOD + SubMOD)
+✔ Alineado con Standard CodeWorkShop v5.0
 */
 // MOD-099: FIN
