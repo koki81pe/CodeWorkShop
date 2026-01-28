@@ -1,3 +1,4 @@
+Copia del documento Standard V05:
 STANDAR CODEWORKSHOP v5.0
 De: Jorge A. Baudouin 
 Formato de código modular para modificaciones quirúrgicas mediante delimitadores explícitos
@@ -601,27 +602,30 @@ const CONFIG = {
 // MOD-002: FIN
  
 // MOD-003: PROCESAMIENTO DE VENTAS [INICIO]
+
+// MOD-003-S01: INICIAL [INICIO]
 function procesarVentas(ventas) {
   const validadas = validarVentas(ventas);
   const calculadas = calcularTotales(validadas);
   return guardarVentas(calculadas);
 }
-// MOD-003: FIN
+// MOD-003-S01: FIN
  
-// MOD-003-S01: VALIDAR VENTAS [INICIO]
+// MOD-003-S02: VALIDAR VENTAS [INICIO]
 function validarVentas(ventas) {
   return ventas.filter(v => v.total > 0);
 }
-// MOD-003-S01: FIN
+// MOD-003-S02: FIN
  
-// MOD-003-S02: CALCULAR TOTALES [INICIO]
+// MOD-003-S03: CALCULAR TOTALES [INICIO]
 function calcularTotales(ventas) {
   return ventas.map(v => ({
 	...v,
 	impuesto: v.total * 0.18
   }));
 }
-// MOD-003-S02: FIN
+// MOD-003-S03: FIN
+// MOD-003: FIN
  
 // MOD-004: CÓDIGO DE CIERRE [INICIO]
 Logger.log('Sistema de ventas cargado');
