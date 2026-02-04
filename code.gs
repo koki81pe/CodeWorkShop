@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.29
-FECHA: 24/01/2026 01:24 (UTC-5)
+VERSIÓN: 01.39
+FECHA: 03/02/2026 21:53 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -861,55 +861,326 @@ function reemplazarMultiplesModulos(codigoCompleto, textoMultiMod) {
 }
 // MOD-014: FIN
 
+// MOD-015: AGREGAR MODULO HÍBRIDO V3 [INICIO]
+
+// MOD-015-S01: FUNCIÓN PRINCIPAL HÍBRIDA V4 [INICIO]
+/**
+ * Función híbrida inteligente: REEMPLAZA si existe, AGREGA si es nuevo.
+ * 
+ * PROCESO V4 (6 ETAPAS):
+ * 1. Parsear módulos originales y nuevos
+ * 2. Clasificar en reemplazos y agregados
+ * 3. Procesar todos los REEMPLAZOS primero
+ * 4. Concatenar todos los módulos (actuales + agregados)
+ * 5. RE-PARSEAR para obtener metadata de ordenamiento en todos
+ * 6. Ordenar y renderizar código limpio
+ * 
+ * @param {string} codigoCompleto - Código original completo
+ * @param {string} nuevoTexto - Código con 1+ módulos a procesar  
+ * @return {Object} {success, codigo?, accionRealizada, modulosProcesados?, error?}
+ */
+function agregarModuloNuevo(codigoCompleto, nuevoTexto) {
+  try {
+    if (!codigoCompleto || !nuevoTexto) {
+      return { success: false, error: 'Parámetros incompletos' };
+    }
+
+    // 🔹 ETAPA 1: Parsear módulos existentes y nuevos
+    const modulosExistentes = parsearModulos(codigoCompleto);
+    if (!modulosExistentes.success) {
+      return { success: false, error: 'No se pudieron parsear módulos existentes' };
+    }
+
+    const modulosNuevos = parsearModulos(nuevoTexto);
+    if (!modulosNuevos.success || modulosNuevos.modulos.length === 0) {
+      return { success: false, error: 'No se detectaron módulos válidos en nuevo código' };
+    }
+
+    // 🔹 ETAPA 2: Clasificar en reemplazos y agregados
+    const idsExistentes = new Set(modulosExistentes.modulos.map(m => m.id.trim()));
+    const reemplazos = [];
+    const agregados = [];
+
+    modulosNuevos.modulos.forEach(mod => {
+      const idNuevo = mod.id.trim();
+      if (idsExistentes.has(idNuevo)) {
+        reemplazos.push(mod);
+      } else {
+        agregados.push(mod);
+      }
+    });
+
+    let codigoActualizado = codigoCompleto;
+    let accionRealizada = '';
+
+    // 🔹 ETAPA 3: Procesar TODOS los reemplazos primero
+    if (reemplazos.length > 0) {
+      for (const mod of reemplazos) {
+        const resultado = reemplazarModulo(codigoActualizado, mod.id, mod.codigo);
+        if (!resultado.success) {
+          return { success: false, error: `Error reemplazando ${mod.id}: ${resultado.error}` };
+        }
+        codigoActualizado = resultado.codigo;
+      }
+      accionRealizada = 'reemplazado';
+      Logger.log(`✅ MOD-015: ${reemplazos.length} módulo(s) reemplazado(s)`);
+    }
+
+    // 🔹 ETAPA 4-6: Procesar agregados con RE-PARSEO para metadata correcta
+    if (agregados.length > 0) {
+      // Parsear código actualizado (con reemplazos ya aplicados)
+      const modulosActuales = parsearModulos(codigoActualizado);
+      if (!modulosActuales.success) {
+        return { success: false, error: 'Error parseando código después de reemplazos' };
+      }
+
+      // 🆕 ETAPA 4: Concatenar TODOS los módulos (actuales + agregados)
+      const todosMods = [...modulosActuales.modulos, ...agregados];
+      const codigoConcatenado = todosMods.map(m => m.codigo.trim()).join('\n\n');
+
+      // 🆕 ETAPA 5: RE-PARSEAR para obtener metadata de ordenamiento en TODOS
+      const reparseo = parsearModulos(codigoConcatenado);
+      if (!reparseo.success) {
+        return { success: false, error: 'Error re-parseando código combinado' };
+      }
+
+      // 🆕 ETAPA 6: Ordenar (ahora todos tienen metadata) y renderizar
+      const ordenados = ordenarModulos(reparseo.modulos);
+      
+      // Renderizar código limpio con espaciado consistente
+      let codigoRenderizado = ordenados.map(m => m.codigo.trim()).join('\n\n');
+      
+      // Asegurar que termine con un solo salto de línea
+      codigoRenderizado = codigoRenderizado.trimEnd() + '\n';
+      
+      codigoActualizado = codigoRenderizado;
+
+      accionRealizada = agregados.length === 1 ? 'agregado' : 'agregados';
+      Logger.log(`✅ MOD-015: ${agregados.length} módulo(s) agregado(s)`);
+    }
+
+    const totalProcesados = reemplazos.length + agregados.length;
+    Logger.log(`✅ MOD-015 v4.0: ${totalProcesados} módulo(s) procesado(s) exitosamente`);
+
+    return {
+      success: true,
+      codigo: codigoActualizado,
+      accionRealizada: accionRealizada,
+      modulosProcesados: totalProcesados,
+      reemplazos: reemplazos.length,
+      agregados: agregados.length
+    };
+
+  } catch (error) {
+    Logger.log('❌ Error MOD-015 v4.0: ' + error.message);
+    return { success: false, error: error.message };
+  }
+}
+// MOD-015-S01: FIN
+
+
+// MOD-015-S02: AGREGAR MÓDULO INDIVIDUAL [INICIO]
+/**
+ * Agrega un módulo nuevo individual detectando predecesor.
+ * Inserta sin preocuparse por espaciado (se normaliza después).
+ * 
+ * LÓGICA:
+ * - MOD-005 busca MOD-004 → Inserta después MOD-004: FIN
+ * - MOD-004-S02 busca MOD-004-S01 → Inserta después MOD-004-S01: FIN
+ * - MOD-001 sin predecesor → Inserta al INICIO
+ */
+function agregarModuloIndividual(codigoCompleto, modNuevo, modulosExistentes) {
+  try {
+    const idNuevo = modNuevo.id.trim();
+    
+    // 🔹 PASO 1: Detectar predecesor
+    const predecesor = encontrarPredecesor(idNuevo, modulosExistentes);
+    if (!predecesor.existe && !esPrimeroValido(idNuevo)) {
+      return { 
+        success: false, 
+        error: `Falta MOD predecesor para ${idNuevo}` 
+      };
+    }
+
+    // 🔹 PASO 2: Encontrar posición de inserción
+    let posicionInsercion = 0;
+    if (predecesor.existe) {
+      // Insertar DESPUÉS del FIN del predecesor
+      const posFin = encontrarPosicionFinModulo(codigoCompleto, predecesor.id);
+      posicionInsercion = posFin > 0 ? posFin : codigoCompleto.length;
+    } else {
+      // Insertar al INICIO (MOD-001 sin predecesor)
+      posicionInsercion = 0;
+    }
+
+    // 🔹 PASO 3: Insertar módulo sin espaciado (se normaliza después)
+    const antes = codigoCompleto.substring(0, posicionInsercion);
+    const despues = codigoCompleto.substring(posicionInsercion);
+    const codigoNuevo = antes + modNuevo.codigo.trim() + '\n' + despues;
+
+    Logger.log(`✅ MOD-015: ${idNuevo} insertado después de ${predecesor.id || 'inicio'}`);
+    
+    return { success: true, codigo: codigoNuevo };
+
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+// MOD-015-S02: FIN
+
+
+// MOD-015-S03: ENCONTRAR PREDECESOR [INICIO]
+/**
+ * Encuentra predecesor de un ID (MOD-005 → MOD-004, MOD-004-S02 → MOD-004-S01)
+ */
+function encontrarPredecesor(idBuscar, modulos) {
+  const numeroBaseBuscar = extraerNumeroBase(idBuscar);
+  const esSubmod = idBuscar.includes('-S');
+  
+  if (esSubmod) {
+    // Buscar último SubMOD anterior: MOD-004-S02 → MOD-004-S01
+    const submodsBase = modulos
+      .filter(m => m.id.includes(numeroBaseBuscar) && m.id.includes('-S'))
+      .sort((a, b) => extraerNumeroSubmodulo(a.id) - extraerNumeroSubmodulo(b.id));
+    return submodsBase.length > 0 ? { existe: true, id: submodsBase[submodsBase.length - 1].id } : { existe: false };
+  } else {
+    // Buscar MOD principal anterior: MOD-005 → MOD-004
+    const modsAnteriores = modulos
+      .filter(m => !m.id.includes('-S'))
+      .filter(m => extraerNumeroBase(m.id) < numeroBaseBuscar)
+      .sort((a, b) => extraerNumeroBase(a.id) - extraerNumeroBase(b.id));
+    return modsAnteriores.length > 0 ? { existe: true, id: modsAnteriores[modsAnteriores.length - 1].id } : { existe: false };
+  }
+}
+// MOD-015-S03: FIN
+
+
+// MOD-015-S04: UTILIDADES DE PARSING [INICIO]
+/**
+ * Extrae número base del ID (MOD-005 → 5, MOD-004-S01 → 4)
+ */
+function extraerNumeroBase(id) {
+  const match = id.match(/MOD-(\d+)/i);
+  return match ? parseInt(match[1]) : 0;
+}
+
+/**
+ * Extrae número de submódulo (MOD-004-S01 → 1)
+ */
+function extraerNumeroSubmodulo(id) {
+  const match = id.match(/S(\d+)/i);
+  return match ? parseInt(match[1]) : 0;
+}
+
+/**
+ * Verifica si MOD-001 es válido sin predecesor
+ */
+function esPrimeroValido(id) {
+  return extraerNumeroBase(id) === 1;
+}
+// MOD-015-S04: FIN
+
+
+// MOD-015-S05: ENCONTRAR POSICIÓN FIN [INICIO]
+/**
+ * Encuentra posición exacta del FIN de un módulo
+ * Retorna la posición INCLUYENDO el salto de línea final
+ */
+function encontrarPosicionFinModulo(codigo, idModulo) {
+  const lineas = codigo.split('\n');
+  let posicionCaracter = 0;
+  
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i];
+    const lineaOriginal = linea; // Mantener espacios originales
+    
+    // Buscar patrón FIN exacto (usando misma lógica que MOD-009)
+    if (linea.trim().includes(idModulo.trim() + ' FIN')) {
+      return posicionCaracter + lineaOriginal.length + 1; // +1 para incluir el \n
+    }
+    
+    posicionCaracter += lineaOriginal.length + 1; // +1 por \n
+  }
+  
+  return -1;
+}
+// MOD-015-S05: FIN
+
+
+// MOD-015-S06: NORMALIZAR ESPACIADO [INICIO]
+/**
+ * Normaliza el espaciado de todos los módulos del código.
+ * Asegura 1 línea en blanco después de cada delimitador FIN.
+ * 
+ * PROCESO:
+ * 1. Detecta todos los delimitadores FIN
+ * 2. Asegura que cada FIN tenga exactamente 1 línea en blanco después
+ * 3. Retorna código con espaciado consistente
+ * 
+ * @param {string} codigo - Código completo con módulos
+ * @return {string} Código con espaciado normalizado
+ */
+function normalizarEspaciadoModulos(codigo) {
+  try {
+    if (!codigo || typeof codigo !== 'string') {
+      return codigo;
+    }
+
+    const lineas = codigo.split('\n');
+    const resultado = [];
+    
+    for (let i = 0; i < lineas.length; i++) {
+      const linea = lineas[i];
+      resultado.push(linea);
+      
+      // Detectar si es un delimitador FIN
+      const esFin = /MOD-\d{3}[A-Z]?(-S\d{2}[A-Z]?)?\s*:\s*FIN/i.test(linea.trim());
+      
+      if (esFin && i < lineas.length - 1) {
+        // Verificar si ya hay línea en blanco después
+        const siguienteLinea = lineas[i + 1];
+        
+        if (siguienteLinea && siguienteLinea.trim() !== '') {
+          // No hay línea en blanco, agregar una
+          resultado.push('');
+        }
+        // Si ya hay línea en blanco (siguienteLinea.trim() === ''), no hacer nada
+      }
+    }
+    
+    Logger.log('✅ MOD-015-S06: Espaciado normalizado');
+    return resultado.join('\n');
+    
+  } catch (error) {
+    Logger.log('⚠️ Error normalizando espaciado: ' + error.message);
+    return codigo; // Retornar código original si falla
+  }
+}
+// MOD-015-S06: FIN
+
+// MOD-015: FIN
+
 // MOD-099: NOTAS [INICIO]
 /*
 Backend central de CodeWorkShop.
-Responsable de detectar, parsear y reemplazar módulos y submódulos.
+Detecta, parsea, valida y reemplaza módulos con delimitadores MOD-XXX.
 
-CAPACIDADES CLAVE:
-- 🆕 ULTRA AGNÓSTICO: Detecta módulos con cualquier símbolo de comentario
-- Soporta MODs y SubMODs jerárquicos (IDs alfanuméricos)
+CARACTERÍSTICAS:
+- Ultra agnóstico: soporta cualquier símbolo de comentario
+- Soporta MODs y SubMODs jerárquicos (MOD-004-S01)
 - Detecta dinámicamente prefijo y sufijo de delimitadores
-- Validación estricta: rechaza código con texto sin modular
-- Estadísticas automáticas: cuenta MODs principales y SubMODs
+- Estadísticas automáticas (cuenta MODs y SubMODs)
+- Modo híbrido: reemplaza módulos existentes O agrega nuevos
 
-FUNCIONES CRÍTICAS:
-- parsearModulos() v4.0 - Detección ultra agnóstica
-- validarModulo() v4.0 - Validación por prefijo/sufijo
-- reemplazarModulo() v5.0 - Reemplazo ultra agnóstico
+FUNCIONES PRINCIPALES:
+- parsearModulos() - Detección ultra agnóstica + conteo de líneas
+- reemplazarModulo() - Reemplazo quirúrgico preservando formato
+- reemplazarMultiplesModulos() - Procesa múltiples MODs en un paso
+- agregarModuloNuevo() - Híbrido: reemplaza si existe, agrega si es nuevo
 
-FUNCIONES AUXILIARES:
-- detectarApertura() - Detecta delimitador de INICIO dinámicamente
-- construirCierre() - Construye patrón de FIN esperado
-- validarTextoModulado() - Rechaza código sin modular
-- eliminarDuplicados() - Elimina MODs duplicados
-- calcularEstadisticas() - Cuenta MODs y SubMODs
-- buscarModuloOriginal() - Extrae prefijo/sufijo del código original
-- encontrarPosicionModulo() - Localiza posición exacta para reemplazo
-
-REGLAS DE DELIMITADORES:
-- Formato apertura: [prefijo] + MOD-XXX: + [descripción] + [INICIO] + [sufijo]
-- Formato cierre: [prefijo] + MOD-XXX: + FIN + [sufijo]
-- Prefijo y sufijo deben coincidir 100% entre apertura y cierre
-- Espacios iniciales de línea se ignoran en detección
-- MOD, [INICIO] y FIN deben estar en MAYÚSCULAS
-
-ADVERTENCIAS:
-- El ID del módulo debe conservarse exactamente
-- Los delimitadores MOD son la única fuente de verdad
-- SubMODs mal escritos se ignoran (se tratan como contenido del padre)
-- Código sin modular genera error y rechaza todo el bloque
-
-ACTUALIZACIÓN V01.26 (Ultra Agnóstico):
-- MOD-006 v4.0: Detección ultra agnóstica de módulos
-- MOD-008 v4.0: Validación por prefijo/sufijo dinámico
-- MOD-009 v5.0: Reemplazo ultra agnóstico
-- MOD-014: Multi MOD compatible con ultra agnóstico
-
-ESTADO:
-✔ Ultra Agnóstico - Soporta cualquier lenguaje de programación
-✔ Validación estricta de código sin modular
-✔ Estadísticas automáticas (MOD + SubMOD)
-✔ Alineado con Standard CodeWorkShop v5.0
+REGLAS CRÍTICAS:
+- Delimitadores: [prefijo] MOD-XXX: [desc] [INICIO] [sufijo] / [prefijo] MOD-XXX: FIN [sufijo]
+- Prefijo y sufijo deben coincidir 100% entre INICIO y FIN
+- MOD, [INICIO] y FIN siempre en MAYÚSCULAS
 */
 // MOD-099: FIN
