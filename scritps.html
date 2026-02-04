@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.19
-FECHA: 24/01/2026 07:31 (UTC-5)
+VERSIÓN: 01.23
+FECHA: 24/01/2026 11:57 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -82,7 +82,7 @@ function analizarModulos(modo) {
 
 // MOD-002-S03: FIN
 
-// MOD-002-S04: UI – LISTADO Y SELECCION DE MODS V2 [INICIO]
+// MOD-002-S04: UI – LISTADO Y SELECCION DE MODS V3 [INICIO]
 function mostrarModulos(modulos) {
   const lista = document.getElementById('listaModulos');
   lista.innerHTML = '';
@@ -141,23 +141,16 @@ function toggleModulos() {
 function configurarModoEdicion(modo) {
   const areaModXMod = document.getElementById('areaModXMod');
   const areaMultiMod = document.getElementById('areaMultiMod');
-  const seccionActual = document.getElementById('seccionModuloActual');
   
-  if (modo === 'multiMod') {
-    // Modo Multi MOD: ocultar área individual, mostrar área múltiple
-    areaModXMod.style.display = 'none';
-    areaMultiMod.style.display = 'block';
-    seccionActual.style.display = 'none';
-    
-    // Mostrar sección de nuevo código directamente
-    document.getElementById('seccionNuevoModulo').style.display = 'block';
-  } else {
-    // Modo MOD x MOD: mostrar área individual, ocultar área múltiple
+  if (modo === 'modXmod') {
+    // SOLO MOD x MOD requiere selección previa
     areaModXMod.style.display = 'block';
     areaMultiMod.style.display = 'none';
-    seccionActual.style.display = 'none';
-    
-    // La sección de nuevo código se mostrará al seleccionar un módulo
+  } else {
+    // Multi MOD y Agregar MOD: textarea 4 directo
+    areaModXMod.style.display = 'none';
+    areaMultiMod.style.display = 'block';
+    document.getElementById('seccionNuevoModulo').style.display = 'block';
   }
 }
 // MOD-002-S04: FIN
@@ -172,7 +165,11 @@ function aplicarCambio() {
   // Detectar el modo y ejecutar la función correspondiente
   if (modoEdicion === 'multiMod') {
     aplicarCambioMultiple();
-  } else {
+  } 
+  else if (modoEdicion === 'nuevoMod') {
+    aplicarCambioNuevo(); // 🆕 HÍBRIDO: reemplaza O agrega
+  }
+  else {
     aplicarCambioIndividual();
   }
 }
@@ -322,6 +319,42 @@ function mostrarCargando(show) {
   // MOD-002-S08: LOG Y ARRANQUE [INICIO]
   console.log('✅ Scripts CodeWorkShop v2.7 cargados');
   // MOD-002-S08: FIN
+
+// MOD-002-S09: AGREGAR MOD HÍBRIDO V2 [INICIO]
+function aplicarCambioNuevo() {
+  const nuevoModulo = document.getElementById('multiModulo').value;  // ✅ Siempre multiModulo
+  
+  if (!nuevoModulo.trim()) {
+    mostrarNotificacion('⚠️ Pega los módulos en el área inferior', 'warning');
+    return;
+  }
+
+  mostrarCargando(true);
+
+  google.script.run
+    .withSuccessHandler(res => {
+      mostrarCargando(false);
+      if (!res.success) {
+        mostrarNotificacion(res.error, 'error');
+        return;
+      }
+      document.getElementById('codigoResultante').value = res.codigo;
+      document.getElementById('seccionResultado').style.display = 'block';
+      
+      if (res.accionRealizada === 'reemplazado') {
+        mostrarNotificacion('✅ Módulo(s) reemplazado(s)', 'success');
+      } else {
+        mostrarNotificacion(`✅ ${res.modulosProcesados} módulo(s) procesado(s)`, 'success');
+      }
+    })
+    .withFailureHandler(err => {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error del servidor: ' + err, 'error');
+    })
+    .agregarModuloNuevo(codigoOriginal, nuevoModulo);
+}
+// MOD-002-S09: FIN
+
 
 </script>
 <!-- MOD-002: FIN -->
