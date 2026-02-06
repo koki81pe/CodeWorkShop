@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.23
-FECHA: 24/01/2026 11:57 (UTC-5)
+VERSIÓN: 01.28
+FECHA: 05/02/2026 14:58 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -355,6 +355,60 @@ function aplicarCambioNuevo() {
 }
 // MOD-002-S09: FIN
 
+// MOD-002-S10: REENUMERAR CÓDIGO [INICIO]
+/**
+ * Reenumera todos los módulos del código cargado.
+ * Ejecuta el proceso completo en 3 etapas:
+ * - Etapa 1: Reenumerar padres + herencia
+ * - Etapa 2: Reenumerar hijos intermedios
+ * - Conversión: Último MOD → MOD-099
+ */
+function reenumerarCodigo() {
+  const codigo = document.getElementById('codigoOriginal').value;
+
+  if (!codigo.trim()) {
+    mostrarNotificacion('⚠️ Carga un código primero', 'warning');
+    return;
+  }
+
+  mostrarCargando(true);
+
+  google.script.run
+    .withSuccessHandler(res => {
+      mostrarCargando(false);
+
+      if (!res.success) {
+        mostrarNotificacion(res.error || '❌ Error al reenumerar', 'error');
+        return;
+      }
+
+      // Si no había cambios necesarios
+      if (res.mensaje) {
+        mostrarNotificacion(res.mensaje, 'info');
+        return;
+      }
+
+      // Mostrar código reenumerado en sección de resultado
+      document.getElementById('codigoResultante').value = res.codigo;
+      document.getElementById('seccionResultado').style.display = 'block';
+
+      // Mostrar estadísticas si están disponibles
+      if (res.estadisticas) {
+        const stats = res.estadisticas;
+        const totalCambios = stats.etapa1.modulosProcesados + stats.etapa2.modulosProcesados;
+        const mensaje = `✅ Reenumeración completa: ${totalCambios} cambio(s) | Etapa 1: ${stats.etapa1.modulosProcesados} | Etapa 2: ${stats.etapa2.modulosProcesados}`;
+        mostrarNotificacion(mensaje, 'success');
+      } else {
+        mostrarNotificacion('✅ Reenumeración completada exitosamente', 'success');
+      }
+    })
+    .withFailureHandler(err => {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error al reenumerar: ' + err, 'error');
+    })
+    .reenumerarModulosCompleto(codigo);
+}
+// MOD-002-S10: FIN
 
 </script>
 <!-- MOD-002: FIN -->
