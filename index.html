@@ -3,8 +3,8 @@
 ******************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: index.html
-VERSIÓN: 01.13
-FECHA: 04/02/2026 22:23 (UTC-5)
+VERSIÓN: 01.15
+FECHA: 08/02/2026 16:29 (UTC-5)
 ******************************************
 -->
 <!-- MOD-001: FIN -->
@@ -50,10 +50,17 @@ FECHA: 04/02/2026 22:23 (UTC-5)
 
 <!-- MOD-005: SECCIÓN CARGA DE CÓDIGO [INICIO] -->
 <div class="section">
-  <h2>1. Cargar Código Original</h2>
-  <textarea id="codigoOriginal"
-            class="code-area"
-            placeholder="Pega aquí tu código con módulos MOD-XXX..."></textarea>
+  <div class="section-header">
+    <h2>1. Cargar Código Original</h2>
+    <button class="btn-collapse" id="btnCollapseSec1" onclick="toggleSeccion1()">
+      ▼
+    </button>
+  </div>
+  <div id="contenidoSec1" class="collapsible-content">
+    <textarea id="codigoOriginal"
+              class="code-area"
+              placeholder="Pega aquí tu código con módulos MOD-XXX..."></textarea>
+  </div>
   <div class="button-group">
     <button class="btn-primary" onclick="analizarModulos('modXmod')">
       🔍 MOD x MOD
@@ -82,31 +89,43 @@ FECHA: 04/02/2026 22:23 (UTC-5)
 
 <!-- MOD-007: SECCIÓN CÓDIGO ACTUAL [INICIO] -->
 <div class="section" id="seccionModuloActual" style="display:none;">
-  <h2>3. Código Actual del Módulo</h2>
-  <textarea id="moduloActual"
-            class="code-area"
-            readonly></textarea>
+  <div class="section-header">
+    <h2>3. Código Actual del Módulo</h2>
+    <button class="btn-collapse" id="btnCollapseSec3" onclick="toggleSeccion3()">
+      ▼
+    </button>
+  </div>
+  <div id="contenidoSec3" class="collapsible-content">
+    <textarea id="moduloActual"
+              class="code-area"
+              readonly></textarea>
+  </div>
 </div>
 <!-- MOD-007: FIN -->
 
 <!-- MOD-008: SECCIÓN NUEVO CÓDIGO [INICIO] -->
 <div class="section" id="seccionNuevoModulo" style="display:none;">
-  <h2>4. Nuevo Código del Módulo</h2>
-  
-  <!-- Textarea para MOD x MOD (modo individual) -->
-  <div id="areaModXMod">
-    <textarea id="nuevoModulo"
-              class="code-area"
-              placeholder="Pega aquí el nuevo código del módulo MOD-XXX..."></textarea>
+  <div class="section-header">
+    <h2>4. Nuevo Código del Módulo</h2>
+    <button class="btn-collapse" id="btnCollapseSec4" onclick="toggleSeccion4()">
+      ▼
+    </button>
   </div>
-  
-  <!-- Textarea para Multi MOD (modo múltiple) -->
-  <div id="areaMultiMod" style="display:none;">
-    <textarea id="multiModulo"
-              class="code-area"
-              placeholder="Pega aquí múltiples módulos MOD-XXX...&#10;&#10;Cada módulo completo con sus delimitadores [INICIO] y FIN."></textarea>
+  <div id="contenidoSec4" class="collapsible-content">
+    <!-- Textarea para MOD x MOD (modo individual) -->
+    <div id="areaModXMod">
+      <textarea id="nuevoModulo"
+                class="code-area"
+                placeholder="Pega aquí el nuevo código del módulo MOD-XXX..."></textarea>
+    </div>
+    
+    <!-- Textarea para Multi MOD (modo múltiple) -->
+    <div id="areaMultiMod" style="display:none;">
+      <textarea id="multiModulo"
+                class="code-area"
+                placeholder="Pega aquí múltiples módulos MOD-XXX...&#10;&#10;Cada módulo completo con sus delimitadores [INICIO] y FIN."></textarea>
+    </div>
   </div>
-  
   <button class="btn-primary" onclick="aplicarCambio()">
     ✅ Aplicar Cambio
   </button>
@@ -115,16 +134,25 @@ FECHA: 04/02/2026 22:23 (UTC-5)
 
 <!-- MOD-009: SECCIÓN RESULTADO [INICIO] -->
 <div class="section" id="seccionResultado" style="display:none;">
-  <h2>5. Código Resultante</h2>
-  <textarea id="codigoResultante"
-            class="code-area"
-            readonly></textarea>
-  <button class="btn-secondary" onclick="copiarResultado()">
-    📋 Copiar Código
-  </button>
-  <button class="btn-secondary" onclick="reiniciar()">
-    🔄 Nueva Modificación
-  </button>
+  <div class="section-header">
+    <h2>5. Código Resultante</h2>
+    <button class="btn-collapse" id="btnCollapseSec5" onclick="toggleSeccion5()">
+      ▼
+    </button>
+  </div>
+  <div id="contenidoSec5" class="collapsible-content">
+    <textarea id="codigoResultante"
+              class="code-area"
+              readonly></textarea>
+  </div>
+  <div class="button-group">
+    <button class="btn-secondary" onclick="copiarResultado()">
+      📋 Copiar Código
+    </button>
+    <button class="btn-secondary" onclick="reiniciar()">
+      🔄 Nueva Modificación
+    </button>
+  </div>
 </div>
 <!-- MOD-009: FIN -->
 
