@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.54
-FECHA: 06/02/2026 14:31 (UTC-5)
+VERSIÓN: 01.65
+FECHA: 07/02/2026 23:26 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -904,19 +904,20 @@ function reemplazarMultiplesModulos(codigoCompleto, textoMultiMod) {
 }
 // MOD-014: FIN
 
-// MOD-015: AGREGAR MODULO HÍBRIDO V3 [INICIO]
+// MOD-015: AGREGAR MODULO HÍBRIDO V5 [INICIO]
 
-// MOD-015-S01: FUNCIÓN PRINCIPAL HÍBRIDA V4 [INICIO]
+// MOD-015-S01: FUNCIÓN PRINCIPAL HÍBRIDA V5 [INICIO]
 /**
  * Función híbrida inteligente: REEMPLAZA si existe, AGREGA si es nuevo.
  * 
- * PROCESO V4 (6 ETAPAS):
+ * PROCESO V5 (LÓGICA SIMPLE):
  * 1. Parsear módulos originales y nuevos
  * 2. Clasificar en reemplazos y agregados
  * 3. Procesar todos los REEMPLAZOS primero
- * 4. Concatenar todos los módulos (actuales + agregados)
- * 5. RE-PARSEAR para obtener metadata de ordenamiento en todos
- * 6. Ordenar y renderizar código limpio
+ * 4. ORDENAR agregados por número (para insertar en secuencia correcta)
+ * 5. Procesar AGREGADOS uno por uno:
+ *    - Buscar antecesor → insertar después de su FIN
+ *    - Si no hay antecesor, buscar sucesor → insertar antes de su INICIO
  * 
  * @param {string} codigoCompleto - Código original completo
  * @param {string} nuevoTexto - Código con 1+ módulos a procesar  
@@ -942,15 +943,65 @@ function agregarModuloNuevo(codigoCompleto, nuevoTexto) {
     // 🔹 ETAPA 2: Clasificar en reemplazos y agregados
     const idsExistentes = new Set(modulosExistentes.modulos.map(m => m.id.trim()));
     const reemplazos = [];
-    const agregados = [];
+    const agregadosSinFiltrar = [];
 
     modulosNuevos.modulos.forEach(mod => {
       const idNuevo = mod.id.trim();
       if (idsExistentes.has(idNuevo)) {
         reemplazos.push(mod);
       } else {
-        agregados.push(mod);
+        agregadosSinFiltrar.push(mod);
       }
+    });
+
+    // 🔹 FILTRAR hijos cuyos padres están en la lista de agregados
+    const idsAgregados = new Set(agregadosSinFiltrar.map(m => m.id.trim()));
+    const agregadosSinOrdenar = agregadosSinFiltrar.filter(mod => {
+      const idMod = mod.id.trim();
+      
+      // Si NO es hijo, mantenerlo
+      if (!idMod.includes('-S')) {
+        return true;
+      }
+      
+      // Es hijo: verificar si su padre está en agregados
+      const numeroPadre = extraerNumeroBase(idMod);
+      const idPadre = `MOD-${String(numeroPadre).padStart(3, '0')}:`;
+      
+      // Si el padre está en agregados, IGNORAR este hijo
+      if (idsAgregados.has(idPadre)) {
+        Logger.log(`⚠️ MOD-015: ${idMod} ignorado (su padre ${idPadre} está en agregados)`);
+        return false;
+      }
+      
+      // Si el padre NO está en agregados, mantener el hijo
+      return true;
+    });
+
+    // 🔹 ORDENAR agregados por número (padres e hijos en secuencia numérica)
+    const agregados = agregadosSinOrdenar.sort((a, b) => {
+      const numA = extraerNumeroBase(a.id);
+      const numB = extraerNumeroBase(b.id);
+      
+      // Primero por número base
+      if (numA !== numB) {
+        return numA - numB;
+      }
+      
+      // Si tienen mismo número base, padres antes que hijos
+      const esHijoA = a.id.includes('-S');
+      const esHijoB = b.id.includes('-S');
+      
+      if (esHijoA !== esHijoB) {
+        return esHijoA ? 1 : -1; // Padre primero
+      }
+      
+      // Si ambos son hijos del mismo padre, ordenar por número de hijo
+      if (esHijoA && esHijoB) {
+        return extraerNumeroSubmodulo(a.id) - extraerNumeroSubmodulo(b.id);
+      }
+      
+      return 0;
     });
 
     let codigoActualizado = codigoCompleto;
@@ -969,41 +1020,27 @@ function agregarModuloNuevo(codigoCompleto, nuevoTexto) {
       Logger.log(`✅ MOD-015: ${reemplazos.length} módulo(s) reemplazado(s)`);
     }
 
-    // 🔹 ETAPA 4-6: Procesar agregados con RE-PARSEO para metadata correcta
+    // 🔹 ETAPA 4: Procesar agregados uno por uno (LÓGICA SIMPLE + ORDENADOS)
     if (agregados.length > 0) {
-      // Parsear código actualizado (con reemplazos ya aplicados)
-      const modulosActuales = parsearModulos(codigoActualizado);
-      if (!modulosActuales.success) {
-        return { success: false, error: 'Error parseando código después de reemplazos' };
+      for (const modNuevo of agregados) {
+        // Re-parsear para tener módulos actualizados después de cada inserción
+        const modulosActualizados = parsearModulos(codigoActualizado);
+        if (!modulosActualizados.success) {
+          return { success: false, error: 'Error parseando código después de inserción' };
+        }
+
+        const resultado = agregarModuloIndividual(codigoActualizado, modNuevo, modulosActualizados.modulos);
+        if (!resultado.success) {
+          return { success: false, error: `Error agregando ${modNuevo.id}: ${resultado.error}` };
+        }
+        codigoActualizado = resultado.codigo;
       }
-
-      // 🆕 ETAPA 4: Concatenar TODOS los módulos (actuales + agregados)
-      const todosMods = [...modulosActuales.modulos, ...agregados];
-      const codigoConcatenado = todosMods.map(m => m.codigo.trim()).join('\n\n');
-
-      // 🆕 ETAPA 5: RE-PARSEAR para obtener metadata de ordenamiento en TODOS
-      const reparseo = parsearModulos(codigoConcatenado);
-      if (!reparseo.success) {
-        return { success: false, error: 'Error re-parseando código combinado' };
-      }
-
-      // 🆕 ETAPA 6: Ordenar (ahora todos tienen metadata) y renderizar
-      const ordenados = ordenarModulos(reparseo.modulos);
-      
-      // Renderizar código limpio con espaciado consistente
-      let codigoRenderizado = ordenados.map(m => m.codigo.trim()).join('\n\n');
-      
-      // Asegurar que termine con un solo salto de línea
-      codigoRenderizado = codigoRenderizado.trimEnd() + '\n';
-      
-      codigoActualizado = codigoRenderizado;
-
       accionRealizada = agregados.length === 1 ? 'agregado' : 'agregados';
       Logger.log(`✅ MOD-015: ${agregados.length} módulo(s) agregado(s)`);
     }
 
     const totalProcesados = reemplazos.length + agregados.length;
-    Logger.log(`✅ MOD-015 v4.0: ${totalProcesados} módulo(s) procesado(s) exitosamente`);
+    Logger.log(`✅ MOD-015 v5.0: ${totalProcesados} módulo(s) procesado(s) exitosamente`);
 
     return {
       success: true,
@@ -1015,7 +1052,7 @@ function agregarModuloNuevo(codigoCompleto, nuevoTexto) {
     };
 
   } catch (error) {
-    Logger.log('❌ Error MOD-015 v4.0: ' + error.message);
+    Logger.log('❌ Error MOD-015 v5.0: ' + error.message);
     return { success: false, error: error.message };
   }
 }
@@ -1024,75 +1061,169 @@ function agregarModuloNuevo(codigoCompleto, nuevoTexto) {
 
 // MOD-015-S02: AGREGAR MÓDULO INDIVIDUAL [INICIO]
 /**
- * Agrega un módulo nuevo individual detectando predecesor.
- * Inserta sin preocuparse por espaciado (se normaliza después).
+ * Agrega un módulo nuevo usando regla simple de líneas.
  * 
- * LÓGICA:
- * - MOD-005 busca MOD-004 → Inserta después MOD-004: FIN
- * - MOD-004-S02 busca MOD-004-S01 → Inserta después MOD-004-S01: FIN
- * - MOD-001 sin predecesor → Inserta al INICIO
+ * REGLA UNIVERSAL:
+ * 1. Buscar ANTECESOR (ID inmediatamente anterior)
+ *    - Si existe → insertar después de su línea FIN
+ * 2. Si no hay antecesor, buscar SUCESOR (ID inmediatamente siguiente)
+ *    - Si existe → insertar antes de su línea INICIO
+ * 3. Si no hay ni antecesor ni sucesor → error (salvo MOD-001)
+ * 
+ * Aplica igual para padres e hijos.
+ * No importa si el padre tiene hijos dentro o cuántos tenga.
+ * 
+ * @param {string} codigoCompleto - Código actual completo
+ * @param {Object} modNuevo - Módulo a agregar {id, codigo}
+ * @param {Array} modulosExistentes - Array de módulos existentes
+ * @return {Object} {success, codigo?, error?}
  */
 function agregarModuloIndividual(codigoCompleto, modNuevo, modulosExistentes) {
   try {
     const idNuevo = modNuevo.id.trim();
     
-    // 🔹 PASO 1: Detectar predecesor
-    const predecesor = encontrarPredecesor(idNuevo, modulosExistentes);
-    if (!predecesor.existe && !esPrimeroValido(idNuevo)) {
-      return { 
-        success: false, 
-        error: `Falta MOD predecesor para ${idNuevo}` 
-      };
-    }
-
-    // 🔹 PASO 2: Encontrar posición de inserción
-    let posicionInsercion = 0;
-    if (predecesor.existe) {
-      // Insertar DESPUÉS del FIN del predecesor
-      const posFin = encontrarPosicionFinModulo(codigoCompleto, predecesor.id);
-      posicionInsercion = posFin > 0 ? posFin : codigoCompleto.length;
-    } else {
-      // Insertar al INICIO (MOD-001 sin predecesor)
-      posicionInsercion = 0;
-    }
-
-    // 🔹 PASO 3: Insertar módulo sin espaciado (se normaliza después)
-    const antes = codigoCompleto.substring(0, posicionInsercion);
-    const despues = codigoCompleto.substring(posicionInsercion);
-    const codigoNuevo = antes + modNuevo.codigo.trim() + '\n' + despues;
-
-    Logger.log(`✅ MOD-015: ${idNuevo} insertado después de ${predecesor.id || 'inicio'}`);
+    // 🔹 PASO 1: Buscar ANTECESOR
+    const antecesor = encontrarAntecesor(idNuevo, modulosExistentes);
     
-    return { success: true, codigo: codigoNuevo };
+    if (antecesor.existe) {
+      // Insertar DESPUÉS del FIN del antecesor
+      const posFin = encontrarPosicionFinModulo(codigoCompleto, antecesor.id);
+      if (posFin === -1) {
+        return { 
+          success: false, 
+          error: `No se encontró el FIN del antecesor ${antecesor.id}` 
+        };
+      }
+      
+      const antes = codigoCompleto.substring(0, posFin);
+      const despues = codigoCompleto.substring(posFin);
+      
+      // Limpiar espacios extras al final y asegurar línea en blanco
+      const antesTrimmed = antes.trimEnd();
+      const codigoNuevo = antesTrimmed + '\n\n' + modNuevo.codigo.trim() + '\n' + despues;
+      
+      Logger.log(`✅ MOD-015: ${idNuevo} insertado después de ${antecesor.id}`);
+      return { success: true, codigo: codigoNuevo };
+    }
+    
+    // 🔹 PASO 2: No hay antecesor, buscar SUCESOR
+    const sucesor = encontrarSucesor(idNuevo, modulosExistentes);
+    
+    if (sucesor.existe) {
+      // Insertar ANTES del INICIO del sucesor
+      const posInicio = encontrarPosicionInicioModulo(codigoCompleto, sucesor.id);
+      if (posInicio === -1) {
+        return { 
+          success: false, 
+          error: `No se encontró el INICIO del sucesor ${sucesor.id}` 
+        };
+      }
+      
+      const antes = codigoCompleto.substring(0, posInicio);
+      const despues = codigoCompleto.substring(posInicio);
+      
+      // Asegurar línea en blanco después del módulo nuevo
+      const codigoNuevo = antes + modNuevo.codigo.trim() + '\n\n' + despues;
+      
+      Logger.log(`✅ MOD-015: ${idNuevo} insertado antes de ${sucesor.id}`);
+      return { success: true, codigo: codigoNuevo };
+    }
+    
+    // 🔹 PASO 3: No hay ni antecesor ni sucesor
+    return { 
+      success: false, 
+      error: `No se encontró posición para insertar ${idNuevo}. No hay antecesor ni sucesor.` 
+    };
 
   } catch (error) {
+    Logger.log(`❌ Error en agregarModuloIndividual: ${error.message}`);
     return { success: false, error: error.message };
   }
 }
 // MOD-015-S02: FIN
 
 
-// MOD-015-S03: ENCONTRAR PREDECESOR [INICIO]
+// MOD-015-S03: ENCONTRAR ANTECESOR [INICIO]
 /**
- * Encuentra predecesor de un ID (MOD-005 → MOD-004, MOD-004-S02 → MOD-004-S01)
+ * Encuentra el antecesor (ID inmediatamente anterior) de un módulo.
+ * Funciona igual para padres e hijos.
+ * 
+ * LÓGICA:
+ * - Para PADRES (MOD-005): busca el MOD con número inmediatamente menor (MOD-004)
+ * - Para HIJOS (MOD-005-S03): busca el hijo con número inmediatamente menor del MISMO padre (MOD-005-S02)
+ * 
+ * EJEMPLOS:
+ * - MOD-005 → antecesor: MOD-004
+ * - MOD-005-S01 → antecesor: ninguno (no hay S00)
+ * - MOD-005-S03 → antecesor: MOD-005-S02
+ * - MOD-005-S03A → antecesor: MOD-005-S03
+ * 
+ * @param {string} idBuscar - ID del módulo a agregar
+ * @param {Array} modulos - Array de módulos existentes
+ * @return {Object} {existe: boolean, id?: string}
  */
-function encontrarPredecesor(idBuscar, modulos) {
+function encontrarAntecesor(idBuscar, modulos) {
   const numeroBaseBuscar = extraerNumeroBase(idBuscar);
-  const esSubmod = idBuscar.includes('-S');
+  const esHijo = idBuscar.includes('-S');
   
-  if (esSubmod) {
-    // Buscar último SubMOD anterior: MOD-004-S02 → MOD-004-S01
-    const submodsBase = modulos
-      .filter(m => m.id.includes(numeroBaseBuscar) && m.id.includes('-S'))
-      .sort((a, b) => extraerNumeroSubmodulo(a.id) - extraerNumeroSubmodulo(b.id));
-    return submodsBase.length > 0 ? { existe: true, id: submodsBase[submodsBase.length - 1].id } : { existe: false };
+  if (esHijo) {
+    // 🔹 CASO HIJO: Buscar hijo anterior del mismo padre
+    const numeroHijoBuscar = extraerNumeroSubmodulo(idBuscar);
+    
+    // Filtrar solo hijos del mismo padre
+    const hijosDelMismoPadre = modulos.filter(m => {
+      if (!m.id.includes('-S')) return false;
+      const numBase = extraerNumeroBase(m.id);
+      return numBase === numeroBaseBuscar;
+    });
+    
+    // Buscar el hijo con número inmediatamente menor
+    let mejorAntecesor = null;
+    let menorDistancia = Infinity;
+    
+    for (const hijo of hijosDelMismoPadre) {
+      const numHijo = extraerNumeroSubmodulo(hijo.id);
+      if (numHijo < numeroHijoBuscar) {
+        const distancia = numeroHijoBuscar - numHijo;
+        if (distancia < menorDistancia) {
+          menorDistancia = distancia;
+          mejorAntecesor = hijo.id.trim();
+        }
+      }
+    }
+    
+    return mejorAntecesor 
+      ? { existe: true, id: mejorAntecesor } 
+      : { existe: false };
+    
   } else {
-    // Buscar MOD principal anterior: MOD-005 → MOD-004
-    const modsAnteriores = modulos
-      .filter(m => !m.id.includes('-S'))
-      .filter(m => extraerNumeroBase(m.id) < numeroBaseBuscar)
-      .sort((a, b) => extraerNumeroBase(a.id) - extraerNumeroBase(b.id));
-    return modsAnteriores.length > 0 ? { existe: true, id: modsAnteriores[modsAnteriores.length - 1].id } : { existe: false };
+    // 🔹 CASO PADRE: Buscar MOD anterior
+    const padres = modulos.filter(m => !m.id.includes('-S'));
+    
+    // 🔹 DEBUG: Loggear padres disponibles
+    Logger.log(`🔍 Buscando antecesor para ${idBuscar}`);
+    Logger.log(`📋 Padres disponibles: ${padres.map(p => p.id).join(', ')}`);
+    
+    // Buscar el padre con número inmediatamente menor
+    let mejorAntecesor = null;
+    let menorDistancia = Infinity;
+    
+    for (const padre of padres) {
+      const numPadre = extraerNumeroBase(padre.id);
+      if (numPadre < numeroBaseBuscar) {
+        const distancia = numeroBaseBuscar - numPadre;
+        if (distancia < menorDistancia) {
+          menorDistancia = distancia;
+          mejorAntecesor = padre.id.trim();
+        }
+      }
+    }
+    
+    Logger.log(`✅ Antecesor encontrado: ${mejorAntecesor || 'ninguno'}`);
+    
+    return mejorAntecesor 
+      ? { existe: true, id: mejorAntecesor } 
+      : { existe: false };
   }
 }
 // MOD-015-S03: FIN
@@ -1124,10 +1255,14 @@ function esPrimeroValido(id) {
 // MOD-015-S04: FIN
 
 
-// MOD-015-S05: ENCONTRAR POSICIÓN FIN [INICIO]
+// MOD-015-S05: ENCONTRAR POSICIONES [INICIO]
 /**
- * Encuentra posición exacta del FIN de un módulo
- * Retorna la posición INCLUYENDO el salto de línea final
+ * Encuentra posición exacta del FIN de un módulo.
+ * Retorna la posición INCLUYENDO el salto de línea final.
+ * 
+ * @param {string} codigo - Código completo
+ * @param {string} idModulo - ID del módulo (ej: "MOD-005:")
+ * @return {number} Posición después del FIN, o -1 si no se encuentra
  */
 function encontrarPosicionFinModulo(codigo, idModulo) {
   const lineas = codigo.split('\n');
@@ -1140,6 +1275,33 @@ function encontrarPosicionFinModulo(codigo, idModulo) {
     // Buscar patrón FIN exacto (usando misma lógica que MOD-009)
     if (linea.trim().includes(idModulo.trim() + ' FIN')) {
       return posicionCaracter + lineaOriginal.length + 1; // +1 para incluir el \n
+    }
+    
+    posicionCaracter += lineaOriginal.length + 1; // +1 por \n
+  }
+  
+  return -1;
+}
+
+/**
+ * Encuentra posición exacta del INICIO de un módulo.
+ * Retorna la posición al COMIENZO de la línea [INICIO].
+ * 
+ * @param {string} codigo - Código completo
+ * @param {string} idModulo - ID del módulo (ej: "MOD-005:")
+ * @return {number} Posición al inicio de la línea [INICIO], o -1 si no se encuentra
+ */
+function encontrarPosicionInicioModulo(codigo, idModulo) {
+  const lineas = codigo.split('\n');
+  let posicionCaracter = 0;
+  
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i];
+    const lineaOriginal = linea; // Mantener espacios originales
+    
+    // Buscar patrón INICIO (ID + cualquier texto + [INICIO])
+    if (linea.trim().includes(idModulo.trim()) && linea.includes('[INICIO]')) {
+      return posicionCaracter; // Retornar inicio de la línea
     }
     
     posicionCaracter += lineaOriginal.length + 1; // +1 por \n
@@ -1200,298 +1362,87 @@ function normalizarEspaciadoModulos(codigo) {
   }
 }
 // MOD-015-S06: FIN
+
+
+// MOD-015-S07: ENCONTRAR SUCESOR [INICIO]
+/**
+ * Encuentra el sucesor (ID inmediatamente siguiente) de un módulo.
+ * Funciona igual para padres e hijos.
+ * 
+ * LÓGICA:
+ * - Para PADRES (MOD-001): busca el MOD con número inmediatamente mayor (MOD-002)
+ * - Para HIJOS (MOD-005-S01): busca el hijo con número inmediatamente mayor del MISMO padre (MOD-005-S02)
+ * 
+ * EJEMPLOS:
+ * - MOD-001 → sucesor: MOD-002
+ * - MOD-005-S01 → sucesor: MOD-005-S02
+ * - MOD-005-S03A → sucesor: MOD-005-S04
+ * 
+ * @param {string} idBuscar - ID del módulo a agregar
+ * @param {Array} modulos - Array de módulos existentes
+ * @return {Object} {existe: boolean, id?: string}
+ */
+function encontrarSucesor(idBuscar, modulos) {
+  const numeroBaseBuscar = extraerNumeroBase(idBuscar);
+  const esHijo = idBuscar.includes('-S');
+  
+  if (esHijo) {
+    // 🔹 CASO HIJO: Buscar hijo siguiente del mismo padre
+    const numeroHijoBuscar = extraerNumeroSubmodulo(idBuscar);
+    
+    // Filtrar solo hijos del mismo padre
+    const hijosDelMismoPadre = modulos.filter(m => {
+      if (!m.id.includes('-S')) return false;
+      const numBase = extraerNumeroBase(m.id);
+      return numBase === numeroBaseBuscar;
+    });
+    
+    // Buscar el hijo con número inmediatamente mayor
+    let mejorSucesor = null;
+    let menorDistancia = Infinity;
+    
+    for (const hijo of hijosDelMismoPadre) {
+      const numHijo = extraerNumeroSubmodulo(hijo.id);
+      if (numHijo > numeroHijoBuscar) {
+        const distancia = numHijo - numeroHijoBuscar;
+        if (distancia < menorDistancia) {
+          menorDistancia = distancia;
+          mejorSucesor = hijo.id.trim();
+        }
+      }
+    }
+    
+    return mejorSucesor 
+      ? { existe: true, id: mejorSucesor } 
+      : { existe: false };
+    
+  } else {
+    // 🔹 CASO PADRE: Buscar MOD siguiente
+    const padres = modulos.filter(m => !m.id.includes('-S'));
+    
+    // Buscar el padre con número inmediatamente mayor
+    let mejorSucesor = null;
+    let menorDistancia = Infinity;
+    
+    for (const padre of padres) {
+      const numPadre = extraerNumeroBase(padre.id);
+      if (numPadre > numeroBaseBuscar) {
+        const distancia = numPadre - numeroBaseBuscar;
+        if (distancia < menorDistancia) {
+          menorDistancia = distancia;
+          mejorSucesor = padre.id.trim();
+        }
+      }
+    }
+    
+    return mejorSucesor 
+      ? { existe: true, id: mejorSucesor } 
+      : { existe: false };
+  }
+}
+// MOD-015-S07: FIN
 
 // MOD-015: FIN
-
-// MOD-015-S01: FUNCIÓN PRINCIPAL HÍBRIDA V4 [INICIO]
-/**
- * Función híbrida inteligente: REEMPLAZA si existe, AGREGA si es nuevo.
- * 
- * PROCESO V4 (6 ETAPAS):
- * 1. Parsear módulos originales y nuevos
- * 2. Clasificar en reemplazos y agregados
- * 3. Procesar todos los REEMPLAZOS primero
- * 4. Concatenar todos los módulos (actuales + agregados)
- * 5. RE-PARSEAR para obtener metadata de ordenamiento en todos
- * 6. Ordenar y renderizar código limpio
- * 
- * @param {string} codigoCompleto - Código original completo
- * @param {string} nuevoTexto - Código con 1+ módulos a procesar  
- * @return {Object} {success, codigo?, accionRealizada, modulosProcesados?, error?}
- */
-function agregarModuloNuevo(codigoCompleto, nuevoTexto) {
-  try {
-    if (!codigoCompleto || !nuevoTexto) {
-      return { success: false, error: 'Parámetros incompletos' };
-    }
-
-    // 🔹 ETAPA 1: Parsear módulos existentes y nuevos
-    const modulosExistentes = parsearModulos(codigoCompleto);
-    if (!modulosExistentes.success) {
-      return { success: false, error: 'No se pudieron parsear módulos existentes' };
-    }
-
-    const modulosNuevos = parsearModulos(nuevoTexto);
-    if (!modulosNuevos.success || modulosNuevos.modulos.length === 0) {
-      return { success: false, error: 'No se detectaron módulos válidos en nuevo código' };
-    }
-
-    // 🔹 ETAPA 2: Clasificar en reemplazos y agregados
-    const idsExistentes = new Set(modulosExistentes.modulos.map(m => m.id.trim()));
-    const reemplazos = [];
-    const agregados = [];
-
-    modulosNuevos.modulos.forEach(mod => {
-      const idNuevo = mod.id.trim();
-      if (idsExistentes.has(idNuevo)) {
-        reemplazos.push(mod);
-      } else {
-        agregados.push(mod);
-      }
-    });
-
-    let codigoActualizado = codigoCompleto;
-    let accionRealizada = '';
-
-    // 🔹 ETAPA 3: Procesar TODOS los reemplazos primero
-    if (reemplazos.length > 0) {
-      for (const mod of reemplazos) {
-        const resultado = reemplazarModulo(codigoActualizado, mod.id, mod.codigo);
-        if (!resultado.success) {
-          return { success: false, error: `Error reemplazando ${mod.id}: ${resultado.error}` };
-        }
-        codigoActualizado = resultado.codigo;
-      }
-      accionRealizada = 'reemplazado';
-      Logger.log(`✅ MOD-015: ${reemplazos.length} módulo(s) reemplazado(s)`);
-    }
-
-    // 🔹 ETAPA 4-6: Procesar agregados con RE-PARSEO para metadata correcta
-    if (agregados.length > 0) {
-      // Parsear código actualizado (con reemplazos ya aplicados)
-      const modulosActuales = parsearModulos(codigoActualizado);
-      if (!modulosActuales.success) {
-        return { success: false, error: 'Error parseando código después de reemplazos' };
-      }
-
-      // 🆕 ETAPA 4: Concatenar TODOS los módulos (actuales + agregados)
-      const todosMods = [...modulosActuales.modulos, ...agregados];
-      const codigoConcatenado = todosMods.map(m => m.codigo.trim()).join('\n\n');
-
-      // 🆕 ETAPA 5: RE-PARSEAR para obtener metadata de ordenamiento en TODOS
-      const reparseo = parsearModulos(codigoConcatenado);
-      if (!reparseo.success) {
-        return { success: false, error: 'Error re-parseando código combinado' };
-      }
-
-      // 🆕 ETAPA 6: Ordenar (ahora todos tienen metadata) y renderizar
-      const ordenados = ordenarModulos(reparseo.modulos);
-      
-      // Renderizar código limpio con espaciado consistente
-      let codigoRenderizado = ordenados.map(m => m.codigo.trim()).join('\n\n');
-      
-      // Asegurar que termine con un solo salto de línea
-      codigoRenderizado = codigoRenderizado.trimEnd() + '\n';
-      
-      codigoActualizado = codigoRenderizado;
-
-      accionRealizada = agregados.length === 1 ? 'agregado' : 'agregados';
-      Logger.log(`✅ MOD-015: ${agregados.length} módulo(s) agregado(s)`);
-    }
-
-    const totalProcesados = reemplazos.length + agregados.length;
-    Logger.log(`✅ MOD-015 v4.0: ${totalProcesados} módulo(s) procesado(s) exitosamente`);
-
-    return {
-      success: true,
-      codigo: codigoActualizado,
-      accionRealizada: accionRealizada,
-      modulosProcesados: totalProcesados,
-      reemplazos: reemplazos.length,
-      agregados: agregados.length
-    };
-
-  } catch (error) {
-    Logger.log('❌ Error MOD-015 v4.0: ' + error.message);
-    return { success: false, error: error.message };
-  }
-}
-// MOD-015-S01: FIN
-
-// MOD-015-S02: AGREGAR MÓDULO INDIVIDUAL [INICIO]
-/**
- * Agrega un módulo nuevo individual detectando predecesor.
- * Inserta sin preocuparse por espaciado (se normaliza después).
- * 
- * LÓGICA:
- * - MOD-005 busca MOD-004 → Inserta después MOD-004: FIN
- * - MOD-004-S02 busca MOD-004-S01 → Inserta después MOD-004-S01: FIN
- * - MOD-001 sin predecesor → Inserta al INICIO
- */
-function agregarModuloIndividual(codigoCompleto, modNuevo, modulosExistentes) {
-  try {
-    const idNuevo = modNuevo.id.trim();
-    
-    // 🔹 PASO 1: Detectar predecesor
-    const predecesor = encontrarPredecesor(idNuevo, modulosExistentes);
-    if (!predecesor.existe && !esPrimeroValido(idNuevo)) {
-      return { 
-        success: false, 
-        error: `Falta MOD predecesor para ${idNuevo}` 
-      };
-    }
-
-    // 🔹 PASO 2: Encontrar posición de inserción
-    let posicionInsercion = 0;
-    if (predecesor.existe) {
-      // Insertar DESPUÉS del FIN del predecesor
-      const posFin = encontrarPosicionFinModulo(codigoCompleto, predecesor.id);
-      posicionInsercion = posFin > 0 ? posFin : codigoCompleto.length;
-    } else {
-      // Insertar al INICIO (MOD-001 sin predecesor)
-      posicionInsercion = 0;
-    }
-
-    // 🔹 PASO 3: Insertar módulo sin espaciado (se normaliza después)
-    const antes = codigoCompleto.substring(0, posicionInsercion);
-    const despues = codigoCompleto.substring(posicionInsercion);
-    const codigoNuevo = antes + modNuevo.codigo.trim() + '\n' + despues;
-
-    Logger.log(`✅ MOD-015: ${idNuevo} insertado después de ${predecesor.id || 'inicio'}`);
-    
-    return { success: true, codigo: codigoNuevo };
-
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-// MOD-015-S02: FIN
-
-// MOD-015-S03: ENCONTRAR PREDECESOR [INICIO]
-/**
- * Encuentra predecesor de un ID (MOD-005 → MOD-004, MOD-004-S02 → MOD-004-S01)
- */
-function encontrarPredecesor(idBuscar, modulos) {
-  const numeroBaseBuscar = extraerNumeroBase(idBuscar);
-  const esSubmod = idBuscar.includes('-S');
-  
-  if (esSubmod) {
-    // Buscar último SubMOD anterior: MOD-004-S02 → MOD-004-S01
-    const submodsBase = modulos
-      .filter(m => m.id.includes(numeroBaseBuscar) && m.id.includes('-S'))
-      .sort((a, b) => extraerNumeroSubmodulo(a.id) - extraerNumeroSubmodulo(b.id));
-    return submodsBase.length > 0 ? { existe: true, id: submodsBase[submodsBase.length - 1].id } : { existe: false };
-  } else {
-    // Buscar MOD principal anterior: MOD-005 → MOD-004
-    const modsAnteriores = modulos
-      .filter(m => !m.id.includes('-S'))
-      .filter(m => extraerNumeroBase(m.id) < numeroBaseBuscar)
-      .sort((a, b) => extraerNumeroBase(a.id) - extraerNumeroBase(b.id));
-    return modsAnteriores.length > 0 ? { existe: true, id: modsAnteriores[modsAnteriores.length - 1].id } : { existe: false };
-  }
-}
-// MOD-015-S03: FIN
-
-// MOD-015-S04: UTILIDADES DE PARSING [INICIO]
-/**
- * Extrae número base del ID (MOD-005 → 5, MOD-004-S01 → 4)
- */
-function extraerNumeroBase(id) {
-  const match = id.match(/MOD-(\d+)/i);
-  return match ? parseInt(match[1]) : 0;
-}
-
-/**
- * Extrae número de submódulo (MOD-004-S01 → 1)
- */
-function extraerNumeroSubmodulo(id) {
-  const match = id.match(/S(\d+)/i);
-  return match ? parseInt(match[1]) : 0;
-}
-
-/**
- * Verifica si MOD-001 es válido sin predecesor
- */
-function esPrimeroValido(id) {
-  return extraerNumeroBase(id) === 1;
-}
-// MOD-015-S04: FIN
-
-// MOD-015-S05: ENCONTRAR POSICIÓN FIN [INICIO]
-/**
- * Encuentra posición exacta del FIN de un módulo
- * Retorna la posición INCLUYENDO el salto de línea final
- */
-function encontrarPosicionFinModulo(codigo, idModulo) {
-  const lineas = codigo.split('\n');
-  let posicionCaracter = 0;
-  
-  for (let i = 0; i < lineas.length; i++) {
-    const linea = lineas[i];
-    const lineaOriginal = linea; // Mantener espacios originales
-    
-    // Buscar patrón FIN exacto (usando misma lógica que MOD-009)
-    if (linea.trim().includes(idModulo.trim() + ' FIN')) {
-      return posicionCaracter + lineaOriginal.length + 1; // +1 para incluir el \n
-    }
-    
-    posicionCaracter += lineaOriginal.length + 1; // +1 por \n
-  }
-  
-  return -1;
-}
-// MOD-015-S05: FIN
-
-// MOD-015-S06: NORMALIZAR ESPACIADO [INICIO]
-/**
- * Normaliza el espaciado de todos los módulos del código.
- * Asegura 1 línea en blanco después de cada delimitador FIN.
- * 
- * PROCESO:
- * 1. Detecta todos los delimitadores FIN
- * 2. Asegura que cada FIN tenga exactamente 1 línea en blanco después
- * 3. Retorna código con espaciado consistente
- * 
- * @param {string} codigo - Código completo con módulos
- * @return {string} Código con espaciado normalizado
- */
-function normalizarEspaciadoModulos(codigo) {
-  try {
-    if (!codigo || typeof codigo !== 'string') {
-      return codigo;
-    }
-
-    const lineas = codigo.split('\n');
-    const resultado = [];
-    
-    for (let i = 0; i < lineas.length; i++) {
-      const linea = lineas[i];
-      resultado.push(linea);
-      
-      // Detectar si es un delimitador FIN
-      const esFin = /MOD-\d{3}[A-Z]?(-S\d{2}[A-Z]?)?\s*:\s*FIN/i.test(linea.trim());
-      
-      if (esFin && i < lineas.length - 1) {
-        // Verificar si ya hay línea en blanco después
-        const siguienteLinea = lineas[i + 1];
-        
-        if (siguienteLinea && siguienteLinea.trim() !== '') {
-          // No hay línea en blanco, agregar una
-          resultado.push('');
-        }
-        // Si ya hay línea en blanco (siguienteLinea.trim() === ''), no hacer nada
-      }
-    }
-    
-    Logger.log('✅ MOD-015-S06: Espaciado normalizado');
-    return resultado.join('\n');
-    
-  } catch (error) {
-    Logger.log('⚠️ Error normalizando espaciado: ' + error.message);
-    return codigo; // Retornar código original si falla
-  }
-}
-// MOD-015-S06: FIN
 
 // MOD-016: RENUMERAR PADRES [INICIO]
 /**
@@ -2296,19 +2247,11 @@ Detecta, parsea, valida y reemplaza módulos con delimitadores MOD-XXX.
 CARACTERÍSTICAS:
 - Ultra agnóstico: soporta cualquier símbolo de comentario
 - Soporta MODs y SubMODs jerárquicos (MOD-004-S01)
-- Detecta dinámicamente prefijo y sufijo de delimitadores
-- Estadísticas automáticas (cuenta MODs y SubMODs)
-- Modo híbrido: reemplaza módulos existentes O agrega nuevos
+- Modo híbrido: reemplaza si existe, agrega si es nuevo con lógica antecesor/sucesor
 
 FUNCIONES PRINCIPALES:
 - parsearModulos() - Detección ultra agnóstica + conteo de líneas
+- agregarModuloNuevo() V5 - Híbrido con inserción simple: busca antecesor → inserta después FIN, si no busca sucesor → inserta antes INICIO
 - reemplazarModulo() - Reemplazo quirúrgico preservando formato
-- reemplazarMultiplesModulos() - Procesa múltiples MODs en un paso
-- agregarModuloNuevo() - Híbrido: reemplaza si existe, agrega si es nuevo
-
-REGLAS CRÍTICAS:
-- Delimitadores: [prefijo] MOD-XXX: [desc] [INICIO] [sufijo] / [prefijo] MOD-XXX: FIN [sufijo]
-- Prefijo y sufijo deben coincidir 100% entre INICIO y FIN
-- MOD, [INICIO] y FIN siempre en MAYÚSCULAS
 */
 // MOD-099: FIN
