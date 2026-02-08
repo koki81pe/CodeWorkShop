@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: style.html
-VERSIÓN: 01.11
-FECHA: 18/01/2026 10:49 (UTC-5)
+VERSIÓN: 01.12
+FECHA: 08/02/2026 16:18 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -321,6 +321,19 @@ button {
   }
 }
 /* MOD-002-S10: FIN */
+
+/* MOD-002-S11: CONTENIDO COLAPSABLE GENÉRICO [INICIO] */
+.collapsible-content {
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+  max-height: 500px;
+}
+
+.collapsible-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+/* MOD-002-S11: FIN */
 
 </style>
 <!-- MOD-002: FIN -->
