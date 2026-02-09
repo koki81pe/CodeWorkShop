@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.65
-FECHA: 07/02/2026 23:26 (UTC-5)
+VERSIÓN: 01.66
+FECHA: 09/02/2026 10:06 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -2238,6 +2238,239 @@ function detectarHijosOrdenFisico(codigo) {
   return hijos;
 }
 // MOD-018: FIN
+
+// MOD-019: ELIMINAR MÓDULOS [INICIO]
+/**
+ * Elimina módulos seleccionados del código.
+ * Realiza deduplicación automática (ignora hijos si su padre está marcado).
+ * Opcionalmente reenumera después de eliminar.
+ * 
+ * COMPORTAMIENTO:
+ * - Eliminación dura: borra todo entre delimitadores [INICIO] y FIN
+ * - Deduplicación automática: si MOD-005 y MOD-005-S01 están marcados,
+ *   solo procesa MOD-005 (el hijo se elimina automáticamente con el padre)
+ * - Bloquea eliminación de MOD-001 y MOD-099
+ * 
+ * @param {string} codigoCompleto - Código original completo
+ * @param {Array} idsAEliminar - Array de IDs a eliminar (ej: ["MOD-003:", "MOD-005:"])
+ * @param {boolean} reenumerar - Si true, reenumera después de eliminar
+ * @return {Object} {success, codigo?, eliminados?, deduplicados?, error?}
+ */
+function eliminarModulos(codigoCompleto, idsAEliminar, reenumerar) {
+  try {
+    if (!codigoCompleto || !idsAEliminar || !Array.isArray(idsAEliminar)) {
+      return {
+        success: false,
+        error: 'Parámetros inválidos'
+      };
+    }
+
+    if (idsAEliminar.length === 0) {
+      return {
+        success: false,
+        error: 'No se seleccionaron módulos para eliminar'
+      };
+    }
+
+    // 🔹 PASO 1: Validar módulos críticos
+    const criticos = idsAEliminar.filter(id => 
+      id === 'MOD-001:' || id === 'MOD-099:'
+    );
+    
+    if (criticos.length > 0) {
+      return {
+        success: false,
+        error: `No se pueden eliminar módulos críticos: ${criticos.join(', ')}`
+      };
+    }
+
+    // 🔹 PASO 2: Deduplicar (eliminar hijos si su padre está marcado)
+    const idsLimpios = deduplicarModulos(idsAEliminar);
+    const deduplicados = idsAEliminar.length - idsLimpios.length;
+
+    Logger.log(`🗑️ MOD-019: Eliminando ${idsLimpios.length} módulo(s)`);
+    if (deduplicados > 0) {
+      Logger.log(`ℹ️ ${deduplicados} redundancia(s) ignorada(s)`);
+    }
+
+    // 🔹 PASO 3: Eliminar cada módulo (bloque completo)
+    let codigoResultante = codigoCompleto;
+    
+    for (const id of idsLimpios) {
+      const resultado = eliminarBloqueModulo(codigoResultante, id);
+      
+      if (!resultado.success) {
+        return {
+          success: false,
+          error: `Error al eliminar ${id}: ${resultado.error}`
+        };
+      }
+      
+      codigoResultante = resultado.codigo;
+      Logger.log(`  ✅ ${id} eliminado`);
+    }
+
+    // 🔹 PASO 4: Reenumerar si se solicitó
+    if (reenumerar) {
+      Logger.log('🔢 Reenumerando código...');
+      const resultadoReenum = reenumerarModulosCompleto(codigoResultante);
+      
+      if (resultadoReenum.success && resultadoReenum.codigo) {
+        codigoResultante = resultadoReenum.codigo;
+        Logger.log('✅ Reenumeración completada');
+      }
+    }
+
+    Logger.log(`✅ MOD-019: ${idsLimpios.length} módulo(s) eliminado(s) exitosamente`);
+
+    return {
+      success: true,
+      codigo: codigoResultante,
+      eliminados: idsLimpios.length,
+      deduplicados: deduplicados
+    };
+
+  } catch (error) {
+    Logger.log('❌ Error en MOD-019: ' + error.message);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Deduplicar módulos: elimina hijos si su padre está en la lista.
+ * 
+ * LÓGICA:
+ * Si MOD-005 y MOD-005-S01 están marcados, solo mantiene MOD-005.
+ * El hijo se eliminará automáticamente al eliminar el bloque del padre.
+ * 
+ * @param {Array} idsAEliminar - Array de IDs marcados
+ * @return {Array} Array de IDs sin redundancias
+ */
+function deduplicarModulos(idsAEliminar) {
+  const resultado = [];
+  
+  for (const id of idsAEliminar) {
+    // Verificar si algún padre de este módulo está en la lista
+    const tienePadreEnLista = idsAEliminar.some(otroId => {
+      return esHijoDe(id, otroId);
+    });
+    
+    // Solo agregar si NO tiene padre en la lista
+    if (!tienePadreEnLista) {
+      resultado.push(id);
+    } else {
+      Logger.log(`  ℹ️ ${id} ignorado (redundante con su padre)`);
+    }
+  }
+  
+  return resultado;
+}
+
+/**
+ * Verifica si un ID es hijo de otro.
+ * 
+ * EJEMPLOS:
+ * - esHijoDe("MOD-005-S01:", "MOD-005:") → true
+ * - esHijoDe("MOD-005:", "MOD-005-S01:") → false
+ * - esHijoDe("MOD-006:", "MOD-005:") → false
+ * 
+ * @param {string} posibleHijo - ID que podría ser hijo
+ * @param {string} posiblePadre - ID que podría ser padre
+ * @return {boolean} true si posibleHijo es hijo de posiblePadre
+ */
+function esHijoDe(posibleHijo, posiblePadre) {
+  // El hijo debe tener -S
+  if (!posibleHijo.includes('-S')) {
+    return false;
+  }
+  
+  // Extraer número base del padre
+  // MOD-005: → 005
+  const matchPadre = posiblePadre.match(/MOD-(\d{3}):/);
+  if (!matchPadre) return false;
+  
+  const numeroPadre = matchPadre[1];
+  
+  // Extraer número base del posible hijo
+  // MOD-005-S01: → 005
+  const matchHijo = posibleHijo.match(/MOD-(\d{3})-S/);
+  if (!matchHijo) return false;
+  
+  const numeroHijo = matchHijo[1];
+  
+  // Son padre-hijo si los números base coinciden
+  return numeroPadre === numeroHijo;
+}
+
+/**
+ * Elimina un bloque completo de módulo del código.
+ * Busca las líneas [INICIO] y FIN, y elimina TODO entre ellas (inclusive).
+ * 
+ * @param {string} codigo - Código completo
+ * @param {string} idModulo - ID del módulo a eliminar
+ * @return {Object} {success, codigo?, error?}
+ */
+function eliminarBloqueModulo(codigo, idModulo) {
+  try {
+    const lineas = codigo.split('\n');
+    let lineaInicio = -1;
+    let lineaFin = -1;
+    
+    // 🔹 Buscar línea [INICIO]
+    for (let i = 0; i < lineas.length; i++) {
+      const linea = lineas[i];
+      if (linea.includes(idModulo) && linea.includes('[INICIO]')) {
+        lineaInicio = i;
+        break;
+      }
+    }
+    
+    if (lineaInicio === -1) {
+      return {
+        success: false,
+        error: `No se encontró el delimitador [INICIO] de ${idModulo}`
+      };
+    }
+    
+    // 🔹 Buscar línea FIN (después de INICIO)
+    for (let i = lineaInicio + 1; i < lineas.length; i++) {
+      const linea = lineas[i];
+      if (linea.includes(idModulo) && linea.includes('FIN')) {
+        lineaFin = i;
+        break;
+      }
+    }
+    
+    if (lineaFin === -1) {
+      return {
+        success: false,
+        error: `No se encontró el delimitador FIN de ${idModulo}`
+      };
+    }
+    
+    // 🔹 Eliminar bloque completo (líneas desde lineaInicio hasta lineaFin, inclusive)
+    lineas.splice(lineaInicio, lineaFin - lineaInicio + 1);
+    
+    // 🔹 Limpiar líneas en blanco excesivas (máximo 2 líneas en blanco consecutivas)
+    const codigoLimpio = lineas.join('\n').replace(/\n{3,}/g, '\n\n');
+    
+    return {
+      success: true,
+      codigo: codigoLimpio
+    };
+    
+  } catch (error) {
+    Logger.log('❌ Error en eliminarBloqueModulo: ' + error.message);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+// MOD-019: FIN
 
 // MOD-099: NOTAS [INICIO]
 /*
