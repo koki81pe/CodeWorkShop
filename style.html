@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: style.html
-VERSIÓN: 01.15
-FECHA: 09/02/2026 11:00 (UTC-5)
+VERSIÓN: 01.20
+FECHA: 09/02/2026 14:34 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -151,6 +151,11 @@ button {
   border: 1px solid var(--border-primary);
 }
 
+.btn-info {
+  background: #8b5cf6;
+  color: #fff;
+}
+
 .btn-danger {
   background: var(--accent-red);
   color: #fff;
@@ -164,8 +169,9 @@ button {
 }
 
 .button-group button {
-  flex: 1;
-  min-width: 150px;
+  max-width: 180px;
+  min-width: 140px;
+  flex-grow: 0;
 }
 
 @media (hover: hover) {
@@ -176,6 +182,10 @@ button {
   .btn-secondary:hover {
     background: var(--bg-secondary);
     border-color: var(--accent-blue);
+  }
+
+  .btn-info:hover {
+    background: #7c3aed;
   }
 
   .btn-danger:hover {
@@ -304,13 +314,18 @@ button {
 }
 /* MOD-002-S07: FIN */
 
-/* MOD-002-S07A: CONTROLES DE APLICACIÓN [INICIO] */
+/* MOD-002-S08: CONTROLES DE APLICACIÓN [INICIO] */
 /* Contenedor para botón "Aplicar Cambio" y checkbox de reenumeración */
 .aplicar-controls {
   margin-top: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.aplicar-controls button {
+  max-width: 180px;
+  align-self: flex-start;
 }
 
 /* Estilos para checkbox de reenumeración en modo Agregar MOD */
@@ -335,9 +350,9 @@ button {
   user-select: none;
   color: var(--text-primary);
 }
-/* MOD-002-S07A: FIN */
+/* MOD-002-S08: FIN */
 
-/* MOD-002-S08: TOAST / NOTIFICACIONES [INICIO] */
+/* MOD-002-S09: TOAST / NOTIFICACIONES [INICIO] */
 .toast {
   position: fixed;
   bottom: -100px;
@@ -356,9 +371,9 @@ button {
 .toast.error   { border-color: var(--error); }
 .toast.warning { border-color: var(--warning); }
 .toast.info    { border-color: var(--info); }
-/* MOD-002-S08: FIN */
+/* MOD-002-S09: FIN */
 
-/* MOD-002-S09: LOADING OVERLAY [INICIO] */
+/* MOD-002-S10: LOADING OVERLAY [INICIO] */
 .loading-overlay {
   display: none;
   position: fixed;
@@ -387,9 +402,9 @@ button {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-/* MOD-002-S09: FIN */
+/* MOD-002-S10: FIN */
 
-/* MOD-002-S10: RESPONSIVE [INICIO] */
+/* MOD-002-S11: RESPONSIVE [INICIO] */
 @media (max-width: 1023px) {
   .header-actions button,
   button {
@@ -401,9 +416,9 @@ button {
     height: 300px;
   }
 }
-/* MOD-002-S10: FIN */
+/* MOD-002-S11: FIN */
 
-/* MOD-002-S11: CONTENIDO COLAPSABLE GENÉRICO [INICIO] */
+/* MOD-002-S12: CONTENIDO COLAPSABLE GENÉRICO [INICIO] */
 .collapsible-content {
   transition: max-height 0.3s ease, opacity 0.3s ease;
   overflow: hidden;
@@ -414,9 +429,9 @@ button {
   max-height: 0;
   opacity: 0;
 }
-/* MOD-002-S11: FIN */
+/* MOD-002-S12: FIN */
 
-/* MOD-002-S12: MODAL DE CONFIRMACIÓN [INICIO] */
+/* MOD-002-S13: MODAL DE CONFIRMACIÓN [INICIO] */
 .modal-overlay {
   display: none;
   position: fixed;
@@ -464,7 +479,7 @@ button {
 .modal-actions button {
   min-width: 100px;
 }
-/* MOD-002-S12: FIN */
+/* MOD-002-S13: FIN */
 
 </style>
 <!-- MOD-002: FIN -->
@@ -472,25 +487,25 @@ button {
 <!-- MOD-099: NOTAS [INICIO] -->
 <!--
 DESCRIPCIÓN:
-Estilos CSS de CodeWorkShop alineados a estándar v2.3.
+Estilos CSS completos de CodeWorkShop. Archivo monolítico con todos los estilos de la interfaz.
 
-VERSIÓN: 01.15
-- Agregado MOD-002-S07A con estilos para .aplicar-controls y .agregar-checkbox-wrapper
-- Estilos específicos para checkbox de reenumeración en modo Agregar MOD
-- Accent color verde para diferenciar de modo Eliminar (rojo)
+CARACTERÍSTICAS PRINCIPALES:
+- Sistema de variables CSS en MOD-002-S01 (tema GitHub Dark personalizable)
+- Clases de botones: .btn-primary (verde), .btn-secondary (gris), .btn-info (morado), .btn-danger (rojo)
+- Botones con tamaño controlado: max-width 180px para evitar expansión excesiva
+- Sistema de secciones colapsables con transiciones suaves
+- Responsive completo con breakpoint en 1023px
+- Modal de confirmación y sistema de notificaciones toast
 
-CLAVES TÉCNICAS:
-- CSS monolítico dentro de <style> (decisión intencional)
-- Delimitadores MOD-XXX solo en comentarios HTML externos
-- Soporte visual para SubMODs (IDs jerárquicos)
+ESTRUCTURA:
+- MOD-002-S01 a S13: Submódulos organizados por componente
+- Delimitadores MOD-XXX solo en comentarios HTML externos (no dentro del CSS)
+- CSS monolítico intencional para simplicidad de mantenimiento
 
-COMPATIBILIDAD:
-- Sin dependencias con backend
-- Seguro para refactors automáticos
-- No afecta parseo ni reemplazo modular
-
-ESTADO:
-✔ Alineado 100% con CodeWorkShop v2.3
-✔ Soporta checkboxes de reenumeración en Eliminar y Agregar
+NOTAS TÉCNICAS:
+- Compatible con Google Apps Script (include en HTML)
+- No requiere preprocesadores ni compilación
+- Todas las animaciones y transiciones en CSS puro
+- Variables CSS permiten cambios de color centralizados
 -->
 <!-- MOD-099: FIN -->
