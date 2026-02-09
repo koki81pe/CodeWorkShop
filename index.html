@@ -3,8 +3,8 @@
 ******************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: index.html
-VERSIÓN: 01.19
-FECHA: 09/02/2026 10:27 (UTC-5)
+VERSIÓN: 01.20
+FECHA: 09/02/2026 11:00 (UTC-5)
 ******************************************
 -->
 <!-- MOD-001: FIN -->
@@ -88,8 +88,8 @@ FECHA: 09/02/2026 10:27 (UTC-5)
   <!-- Controles de eliminación (ocultos por defecto) -->
   <div id="controlesEliminar" class="eliminar-controls" style="display:none;">
     <div class="eliminar-checkbox-wrapper">
-      <input type="checkbox" id="checkReenum" />
-      <label for="checkReenum">Reenumerar</label>
+      <input type="checkbox" id="checkReenumEliminar" />
+      <label for="checkReenumEliminar">Reenumerar</label>
     </div>
     <button class="btn-danger" onclick="confirmarEliminacion()" style="width:100%;">
       Confirmar Eliminación
@@ -130,9 +130,19 @@ FECHA: 09/02/2026 10:27 (UTC-5)
                 placeholder="Pega aquí uno o múltiples módulos MOD-XXX...&#10;&#10;Cada módulo completo con sus delimitadores [INICIO] y FIN."></textarea>
     </div>
   </div>
-  <button class="btn-primary" onclick="aplicarCambio()">
-    ✅ Aplicar Cambio
-  </button>
+  
+  <!-- 🆕 Controles de aplicación con checkbox de reenumeración -->
+  <div class="aplicar-controls">
+    <!-- Checkbox de reenumeración (solo visible en modo Agregar MOD) -->
+    <div id="checkboxReenumAgregar" class="agregar-checkbox-wrapper" style="display:none;">
+      <input type="checkbox" id="checkReenumAgregar" />
+      <label for="checkReenumAgregar">Reenumerar después de agregar</label>
+    </div>
+    
+    <button class="btn-primary" onclick="aplicarCambio()">
+      ✅ Aplicar Cambio
+    </button>
+  </div>
 </div>
 <!-- MOD-008: FIN -->
 
@@ -194,36 +204,35 @@ FECHA: 09/02/2026 10:27 (UTC-5)
 <!--
 DESCRIPCIÓN:
 Página principal (contenedor UI) de CodeWorkShop.
-Interfaz con 2 botones principales: Multi MOD y Agregar MOD.
-Ambos comparten visualización de lista y código actual.
+Interfaz con 3 botones principales: Multi MOD, Agregar MOD y Eliminar MOD.
 
-VERSIÓN: 01.17
-- Eliminado solo el botón "MOD x MOD" 
-- Conservada Sección 2 (Lista de módulos) con clicks funcionales
-- Conservada Sección 3 (Código actual) visible al seleccionar
-- Conservada Sección 4 (Nuevo código) con textarea único
-- Ambos botones (Multi MOD y Agregar MOD) usan el mismo flujo visual
+VERSIÓN: 01.20
+- Agregado checkbox "Reenumerar después de agregar" en Sección 4
+- Checkbox visible solo en modo "Agregar MOD"
+- Mantiene checkbox de reenumeración en Sección 2 para modo "Eliminar MOD"
+- IDs diferenciados: checkReenumEliminar (Sección 2) y checkReenumAgregar (Sección 4)
 
 ESTÁNDAR:
 - SOPORTE COMPLETO CodeWorkShop v3
 
 INTEGRACIÓN CON BACKEND:
-- Compatible con backend code.gs v01.29+
+- Compatible con backend code.gs v01.67+
 - Multi MOD: reemplazarMultiplesModulos()
-- Agregar MOD: agregarModuloNuevo() v5.0 (híbrido)
+- Agregar MOD: agregarModuloNuevo() v6.0 (con reenumeración)
+- Eliminar MOD: eliminarModulos() (con reenumeración)
 
 FLUJO DE TRABAJO:
 1. Usuario carga código original
-2. Selecciona modo: Multi MOD o Agregar MOD
-3. Ve lista de módulos detectados (con líneas y descripción)
-4. Click en módulo para ver código actual (opcional)
-5. Pega módulo(s) nuevo(s) en textarea
-6. Backend procesa según modo
+2. Selecciona modo: Multi MOD, Agregar MOD o Eliminar MOD
+3. Ve lista de módulos detectados
+4. Para Agregar MOD: opcionalmente marca checkbox de reenumeración
+5. Pega módulo(s) nuevo(s)
+6. Backend procesa según modo (con o sin reenumeración)
 7. Sistema muestra resultado final
 
 DEPENDENCIAS:
-- style.html v01.08+
-- scripts.html v01.32+
-- Backend code.gs v01.29+
+- style.html v01.14+
+- scripts.html v01.37+
+- Backend code.gs v01.67+
 -->
 <!-- MOD-099: FIN -->
