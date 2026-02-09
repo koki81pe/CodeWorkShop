@@ -3,8 +3,8 @@
 ******************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: index.html
-VERSIÓN: 01.15
-FECHA: 08/02/2026 16:29 (UTC-5)
+VERSIÓN: 01.19
+FECHA: 09/02/2026 10:27 (UTC-5)
 ******************************************
 -->
 <!-- MOD-001: FIN -->
@@ -62,14 +62,14 @@ FECHA: 08/02/2026 16:29 (UTC-5)
               placeholder="Pega aquí tu código con módulos MOD-XXX..."></textarea>
   </div>
   <div class="button-group">
-    <button class="btn-primary" onclick="analizarModulos('modXmod')">
-      🔍 MOD x MOD
-    </button>
     <button class="btn-primary" onclick="analizarModulos('multiMod')">
       📦 Multi MOD
     </button>
     <button class="btn-primary" onclick="analizarModulos('nuevoMod')">
       ➕ Agregar MOD
+    </button>
+    <button class="btn-danger" onclick="analizarModulos('eliminarMod')">
+      🗑️ Eliminar MOD
     </button>
   </div>
 </div>
@@ -78,12 +78,23 @@ FECHA: 08/02/2026 16:29 (UTC-5)
 <!-- MOD-006: SECCIÓN LISTA DE MÓDULOS [INICIO] -->
 <div class="section" id="seccionModulos" style="display:none;">
   <div class="section-header">
-    <h2>2. Seleccionar Módulo a Modificar</h2>
+    <h2 id="tituloSeccionModulos">2. Seleccionar Módulo a Modificar</h2>
     <button class="btn-collapse" id="btnCollapseModulos" onclick="toggleModulos()">
       ▼
     </button>
   </div>
   <div id="listaModulos" class="modulo-list"></div>
+  
+  <!-- Controles de eliminación (ocultos por defecto) -->
+  <div id="controlesEliminar" class="eliminar-controls" style="display:none;">
+    <div class="eliminar-checkbox-wrapper">
+      <input type="checkbox" id="checkReenum" />
+      <label for="checkReenum">Reenumerar</label>
+    </div>
+    <button class="btn-danger" onclick="confirmarEliminacion()" style="width:100%;">
+      Confirmar Eliminación
+    </button>
+  </div>
 </div>
 <!-- MOD-006: FIN -->
 
@@ -112,18 +123,11 @@ FECHA: 08/02/2026 16:29 (UTC-5)
     </button>
   </div>
   <div id="contenidoSec4" class="collapsible-content">
-    <!-- Textarea para MOD x MOD (modo individual) -->
-    <div id="areaModXMod">
-      <textarea id="nuevoModulo"
-                class="code-area"
-                placeholder="Pega aquí el nuevo código del módulo MOD-XXX..."></textarea>
-    </div>
-    
-    <!-- Textarea para Multi MOD (modo múltiple) -->
-    <div id="areaMultiMod" style="display:none;">
+    <!-- Textarea para Multi MOD y Agregar MOD (modo múltiple) -->
+    <div id="areaMultiMod">
       <textarea id="multiModulo"
                 class="code-area"
-                placeholder="Pega aquí múltiples módulos MOD-XXX...&#10;&#10;Cada módulo completo con sus delimitadores [INICIO] y FIN."></textarea>
+                placeholder="Pega aquí uno o múltiples módulos MOD-XXX...&#10;&#10;Cada módulo completo con sus delimitadores [INICIO] y FIN."></textarea>
     </div>
   </div>
   <button class="btn-primary" onclick="aplicarCambio()">
@@ -156,11 +160,23 @@ FECHA: 08/02/2026 16:29 (UTC-5)
 </div>
 <!-- MOD-009: FIN -->
 
-<!-- MOD-010: NOTIFICACIONES Y LOADING [INICIO] -->
+<!-- MOD-010: NOTIFICACIONES, LOADING Y MODAL [INICIO] -->
 <div id="toast" class="toast"></div>
+
 <div id="loading" class="loading-overlay">
   <div class="spinner"></div>
   <p>Procesando...</p>
+</div>
+
+<div id="modalConfirm" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header" id="modalTitle">Confirmar Acción</div>
+    <div class="modal-body" id="modalMessage"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-danger" id="modalConfirmBtn" onclick="confirmarModal()">Confirmar</button>
+    </div>
+  </div>
 </div>
 <!-- MOD-010: FIN -->
 
@@ -178,40 +194,36 @@ FECHA: 08/02/2026 16:29 (UTC-5)
 <!--
 DESCRIPCIÓN:
 Página principal (contenedor UI) de CodeWorkShop.
-Actúa como esqueleto visual y estructural para la modificación
-modular y jerárquica de código.
+Interfaz con 2 botones principales: Multi MOD y Agregar MOD.
+Ambos comparten visualización de lista y código actual.
+
+VERSIÓN: 01.17
+- Eliminado solo el botón "MOD x MOD" 
+- Conservada Sección 2 (Lista de módulos) con clicks funcionales
+- Conservada Sección 3 (Código actual) visible al seleccionar
+- Conservada Sección 4 (Nuevo código) con textarea único
+- Ambos botones (Multi MOD y Agregar MOD) usan el mismo flujo visual
 
 ESTÁNDAR:
 - SOPORTE COMPLETO CodeWorkShop v3
 
 INTEGRACIÓN CON BACKEND:
-- Compatible con backend code.gs v01.11 / v01.12
-- Renderiza estructuras jerárquicas ya ordenadas por el backend
-- No asume listas planas de módulos
+- Compatible con backend code.gs v01.29+
+- Multi MOD: reemplazarMultiplesModulos()
+- Agregar MOD: agregarModuloNuevo() v5.0 (híbrido)
 
-FLUJO DE TRABAJO (v2.3):
+FLUJO DE TRABAJO:
 1. Usuario carga código original
-2. scripts.html envía código al backend
-3. Backend parsea, ordena y clasifica módulos y submódulos
-4. Sistema muestra módulos y submódulos respetando
-   el orden natural y jerárquico
-5. Usuario selecciona módulo o submódulo
-6. Se muestra el código actual
-7. Usuario pega nuevo código conservando el ID
-8. Backend reemplaza el bloque exacto
-9. Sistema muestra el resultado final
+2. Selecciona modo: Multi MOD o Agregar MOD
+3. Ve lista de módulos detectados (con líneas y descripción)
+4. Click en módulo para ver código actual (opcional)
+5. Pega módulo(s) nuevo(s) en textarea
+6. Backend procesa según modo
+7. Sistema muestra resultado final
 
 DEPENDENCIAS:
-- style.html v01.08
-- scripts.html v01.09
-- Backend code.gs v01.11+
-
-ADVERTENCIAS:
-- NO modificar IDs de contenedores HTML
-- NO cambiar includes de style/scripts
-- El reemplazo depende del ID exacto del módulo
-
-ACTUALIZACIÓN:
-- Multi MOD V01.11
+- style.html v01.08+
+- scripts.html v01.32+
+- Backend code.gs v01.29+
 -->
 <!-- MOD-099: FIN -->
