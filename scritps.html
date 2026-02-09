@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.30
-FECHA: 08/02/2026 16:32 (UTC-5)
+VERSIÓN: 01.36
+FECHA: 10/02/2026 10:46 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -16,7 +16,8 @@ FECHA: 08/02/2026 16:32 (UTC-5)
 let codigoOriginal = '';
 let modulosDetectados = [];
 let moduloSeleccionado = null;
-let modoEdicion = null; // 'modXmod' o 'multiMod'
+let modoEdicion = null; // 'multiMod', 'nuevoMod' o 'eliminarMod'
+let modulosAEliminar = []; // IDs de módulos marcados para eliminar
 // MOD-002-S01: FIN
 
 
@@ -33,7 +34,7 @@ let modoEdicion = null; // 'modXmod' o 'multiMod'
   // MOD-002-S02: FIN
 
 
-// MOD-002-S03: ANALISIS DE MODULOS V2 [INICIO]
+// MOD-002-S03: ANALISIS DE MODULOS V3 [INICIO]
 
 function analizarModulos(modo) {
   const codigo = document.getElementById('codigoOriginal').value;
@@ -60,7 +61,13 @@ function analizarModulos(modo) {
       codigoOriginal = codigo;
       modulosDetectados = res.modulos;
 
-      mostrarModulos(modulosDetectados);
+      // 🆕 Renderizar según modo
+      if (modo === 'eliminarMod') {
+        mostrarModulosParaEliminar(modulosDetectados);
+      } else {
+        mostrarModulos(modulosDetectados);
+      }
+      
       configurarModoEdicion(modo);
       
       // 🆕 MOSTRAR ESTADÍSTICAS
@@ -82,7 +89,7 @@ function analizarModulos(modo) {
 
 // MOD-002-S03: FIN
 
-// MOD-002-S04: UI – LISTADO Y SELECCION DE MODS V3 [INICIO]
+// MOD-002-S04: UI – LISTADO Y SELECCION DE MODS V4 [INICIO]
 function mostrarModulos(modulos) {
   const lista = document.getElementById('listaModulos');
   lista.innerHTML = '';
@@ -106,6 +113,12 @@ function mostrarModulos(modulos) {
   const btnCollapse = document.getElementById('btnCollapseModulos');
   listaElement.classList.remove('collapsed');
   btnCollapse.textContent = '▼';
+  
+  // Ocultar controles de eliminación
+  document.getElementById('controlesEliminar').style.display = 'none';
+  
+  // Actualizar título
+  document.getElementById('tituloSeccionModulos').textContent = '2. Seleccionar Módulo a Modificar';
 }
 
 function seleccionarModulo(index) {
@@ -150,19 +163,12 @@ function toggleModulos() {
 }
 
 function configurarModoEdicion(modo) {
-  const areaModXMod = document.getElementById('areaModXMod');
-  const areaMultiMod = document.getElementById('areaMultiMod');
-  
-  if (modo === 'modXmod') {
-    // SOLO MOD x MOD requiere selección previa
-    areaModXMod.style.display = 'block';
-    areaMultiMod.style.display = 'none';
+  if (modo === 'eliminarMod') {
+    // MODO ELIMINAR: No mostrar Sección 3 ni 4
+    document.getElementById('seccionModuloActual').style.display = 'none';
+    document.getElementById('seccionNuevoModulo').style.display = 'none';
   } else {
-    // Multi MOD y Agregar MOD: textarea 4 directo
-    areaModXMod.style.display = 'none';
-    areaMultiMod.style.display = 'block';
-    
-    // 🆕 MOSTRAR Y EXPANDIR SECCIÓN 4
+    // MODO NORMAL: Mostrar y expandir sección de nuevo módulo
     document.getElementById('seccionNuevoModulo').style.display = 'block';
     const contenidoSec4 = document.getElementById('contenidoSec4');
     const btnCollapseSec4 = document.getElementById('btnCollapseSec4');
@@ -184,51 +190,8 @@ function aplicarCambio() {
     aplicarCambioMultiple();
   } 
   else if (modoEdicion === 'nuevoMod') {
-    aplicarCambioNuevo(); // 🆕 HÍBRIDO: reemplaza O agrega
+    aplicarCambioNuevo();
   }
-  else {
-    aplicarCambioIndividual();
-  }
-}
-
-function aplicarCambioIndividual() {
-  if (!moduloSeleccionado) {
-    mostrarNotificacion('⚠️ Selecciona un módulo primero', 'warning');
-    return;
-  }
-
-  const nuevoModulo = document.getElementById('nuevoModulo').value;
-  
-  if (!nuevoModulo.trim()) {
-    mostrarNotificacion('⚠️ Pega el nuevo código del módulo', 'warning');
-    return;
-  }
-
-  mostrarCargando(true);
-
-  google.script.run
-    .withSuccessHandler(res => {
-      mostrarCargando(false);
-
-      if (!res.success) {
-        mostrarNotificacion(res.error, 'error');
-        return;
-      }
-
-      document.getElementById('codigoResultante').value = res.codigo;
-      document.getElementById('seccionResultado').style.display = 'block';
-
-      mostrarNotificacion('✅ Módulo reemplazado', 'success');
-    })
-    .withFailureHandler(() => {
-      mostrarCargando(false);
-      mostrarNotificacion('❌ Error al aplicar cambio', 'error');
-    })
-    .reemplazarModulo(
-      codigoOriginal,
-      moduloSeleccionado.id,
-      nuevoModulo
-    );
 }
 
 function aplicarCambioMultiple() {
@@ -333,13 +296,13 @@ function mostrarCargando(show) {
   // MOD-002-S07: FIN
 
 
-  // MOD-002-S08: LOG Y ARRANQUE [INICIO]
-  console.log('✅ Scripts CodeWorkShop v2.7 cargados');
-  // MOD-002-S08: FIN
+// MOD-002-S08: LOG Y ARRANQUE [INICIO]
+console.log('✅ Scripts CodeWorkShop v01.33 cargados');
+// MOD-002-S08: FIN
 
 // MOD-002-S09: AGREGAR MOD HÍBRIDO V2 [INICIO]
 function aplicarCambioNuevo() {
-  const nuevoModulo = document.getElementById('multiModulo').value;  // ✅ Siempre multiModulo
+  const nuevoModulo = document.getElementById('multiModulo').value;
   
   if (!nuevoModulo.trim()) {
     mostrarNotificacion('⚠️ Pega los módulos en el área inferior', 'warning');
@@ -486,6 +449,197 @@ function toggleSeccion5() {
 }
 // MOD-002-S11: FIN
 
+// MOD-002-S12: ELIMINAR MÓDULOS [INICIO]
+/**
+ * Renderiza lista de módulos con checkboxes para modo eliminación.
+ * Oculta Sección 3 y muestra controles de eliminación.
+ */
+function mostrarModulosParaEliminar(modulos) {
+  const lista = document.getElementById('listaModulos');
+  lista.innerHTML = '';
+  
+  // Resetear array de módulos a eliminar
+  modulosAEliminar = [];
+
+  modulos.forEach((mod, index) => {
+    const item = document.createElement('div');
+    item.className = 'modulo-item';
+    
+    // Crear checkbox
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'modulo-checkbox';
+    checkbox.id = `check-${index}`;
+    checkbox.dataset.modId = mod.id;
+    
+    // Bloquear MOD-001 y MOD-099
+    if (mod.id === 'MOD-001:' || mod.id === 'MOD-099:') {
+      checkbox.disabled = true;
+      item.style.opacity = '0.5';
+      item.title = 'No se puede eliminar este módulo';
+    }
+    
+    checkbox.onchange = (e) => toggleCheckbox(e, mod.id);
+    
+    // Texto del módulo
+    const textoLineas = mod.lineas ? ` (${mod.lineas} líneas)` : '';
+    const label = document.createElement('label');
+    label.htmlFor = `check-${index}`;
+    label.textContent = `${mod.id} ${mod.descripcion}${textoLineas}`;
+    label.style.cursor = 'pointer';
+    label.style.flex = '1';
+    
+    // Click en el item marca/desmarca el checkbox
+    item.onclick = (e) => {
+      if (e.target !== checkbox && !checkbox.disabled) {
+        checkbox.checked = !checkbox.checked;
+        toggleCheckbox({ target: checkbox }, mod.id);
+      }
+    };
+    
+    item.appendChild(checkbox);
+    item.appendChild(label);
+    lista.appendChild(item);
+  });
+
+  document.getElementById('seccionModulos').style.display = 'block';
+  
+  // Expandir lista
+  const listaElement = document.getElementById('listaModulos');
+  const btnCollapse = document.getElementById('btnCollapseModulos');
+  listaElement.classList.remove('collapsed');
+  btnCollapse.textContent = '▼';
+  
+  // Mostrar controles de eliminación
+  document.getElementById('controlesEliminar').style.display = 'flex';
+  
+  // Actualizar título
+  document.getElementById('tituloSeccionModulos').textContent = '2. Seleccionar Módulos a Eliminar';
+}
+
+/**
+ * Maneja el cambio de estado de un checkbox.
+ */
+function toggleCheckbox(event, modId) {
+  if (event.target.checked) {
+    // Agregar a la lista
+    if (!modulosAEliminar.includes(modId)) {
+      modulosAEliminar.push(modId);
+    }
+  } else {
+    // Quitar de la lista
+    modulosAEliminar = modulosAEliminar.filter(id => id !== modId);
+  }
+}
+
+/**
+ * Confirma y ejecuta la eliminación de módulos marcados.
+ */
+function confirmarEliminacion() {
+  if (modulosAEliminar.length === 0) {
+    mostrarNotificacion('⚠️ No has seleccionado ningún módulo', 'warning');
+    return;
+  }
+  
+  const reenumerar = document.getElementById('checkReenum').checked;
+  const cantidad = modulosAEliminar.length;
+  
+  // Construir mensaje
+  let mensaje = `Se eliminarán ${cantidad} módulo(s).`;
+  if (reenumerar) {
+    mensaje += '\n\nSe reenumerará automáticamente después.';
+  }
+  
+  // Mostrar modal personalizado
+  mostrarModal('⚠️ Confirmar Eliminación', mensaje, () => {
+    ejecutarEliminacion(reenumerar);
+  });
+}
+
+/**
+ * Ejecuta la eliminación después de confirmar.
+ */
+function ejecutarEliminacion(reenumerar) {
+  mostrarCargando(true);
+
+  // 🔹 CRÍTICO: Capturar los IDs ANTES de la llamada asíncrona
+  const idsAEliminar = [...modulosAEliminar];
+
+  google.script.run
+    .withSuccessHandler(res => {
+      mostrarCargando(false);
+
+      if (!res.success) {
+        mostrarNotificacion(res.error, 'error');
+        return;
+      }
+
+      // Mostrar resultado
+      document.getElementById('codigoResultante').value = res.codigo;
+      document.getElementById('seccionResultado').style.display = 'block';
+
+      // Mensaje de éxito
+      let mensaje = `✅ ${res.eliminados} módulo(s) eliminado(s)`;
+      if (res.deduplicados > 0) {
+        mensaje += ` (${res.deduplicados} redundancia(s) ignorada(s))`;
+      }
+      
+      mostrarNotificacion(mensaje, 'success');
+      
+      // Resetear UI
+      modulosAEliminar = [];
+      document.getElementById('seccionModulos').style.display = 'none';
+    })
+    .withFailureHandler(err => {
+      mostrarCargando(false);
+      mostrarNotificacion('❌ Error al eliminar: ' + err, 'error');
+    })
+    .eliminarModulos(codigoOriginal, idsAEliminar, reenumerar);
+}
+// MOD-002-S12: FIN
+
+// MOD-002-S13: MODAL DE CONFIRMACIÓN [INICIO]
+let modalCallback = null;
+
+/**
+ * Muestra modal de confirmación personalizado.
+ * 
+ * @param {string} titulo - Título del modal
+ * @param {string} mensaje - Mensaje a mostrar
+ * @param {Function} onConfirm - Función a ejecutar al confirmar
+ */
+function mostrarModal(titulo, mensaje, onConfirm) {
+  document.getElementById('modalTitle').textContent = titulo;
+  document.getElementById('modalMessage').textContent = mensaje;
+  document.getElementById('modalConfirm').classList.add('show');
+  
+  modalCallback = onConfirm;
+}
+
+/**
+ * Cierra el modal de confirmación.
+ */
+function cerrarModal() {
+  document.getElementById('modalConfirm').classList.remove('show');
+  modalCallback = null;
+}
+
+/**
+ * Ejecuta la acción confirmada y cierra el modal.
+ */
+function confirmarModal() {
+  // 🔹 Guardar callback ANTES de cerrar (cerrarModal lo anula)
+  const callback = modalCallback;
+  
+  cerrarModal();
+  
+  // 🔹 Ejecutar el callback guardado
+  if (callback && typeof callback === 'function') {
+    callback();
+  }
+}
+// MOD-002-S13: FIN
+
 </script>
 <!-- MOD-002: FIN -->
 
@@ -494,23 +648,34 @@ function toggleSeccion5() {
 DESCRIPCIÓN:
 Frontend de CodeWorkShop. Captura código, envía al backend y muestra resultados.
 
+VERSIÓN: 01.32
+- Eliminado solo el botón "MOD x MOD"
+- Conservadas todas las funciones de visualización: mostrarModulos(), 
+  seleccionarModulo(), toggleModulos(), toggleSeccion3()
+- Conservadas variables: moduloSeleccionado, modulosDetectados
+- Ambos botones (Multi MOD y Agregar MOD) comparten:
+  * Lista de módulos con clicks
+  * Visualización de código actual
+  * Textarea único para nuevos módulos
+- Simplificado aplicarCambio(): solo 2 modos (multiMod, nuevoMod)
+- Actualizado toggles: secciones 1, 3, 4, 5
+
 RESPONSABILIDAD:
 - Captura código del usuario
 - Envía a code.gs para procesamiento
 - Muestra resultados y estadísticas
-- Gestiona UI de modo MOD x MOD y Multi MOD
-
-ACTUALIZACIÓN V01.19:
-- MOD-002-S03: Muestra estadísticas (total MOD, padres, hijos)
-- MOD-002-S04 V2: Muestra conteo de líneas por módulo
+- Gestiona UI de Multi MOD y Agregar MOD
 
 INTEGRACIÓN:
 Backend code.gs v01.29:
 - MOD-006 v7.0: Detección ultra agnóstica + conteo de líneas
 - MOD-008 v4.0: Validación dinámica
 - MOD-009 v6.0: Reemplazo ultra agnóstico
+- MOD-014: reemplazarMultiplesModulos()
+- MOD-015 v5.0: agregarModuloNuevo() híbrido
 
 ESTADO:
+Compatible con index.html v01.17
 Compatible con backend ultra agnóstico v01.29
 -->
 <!-- MOD-099: FIN -->
