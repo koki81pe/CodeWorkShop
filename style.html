@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: style.html
-VERSIÓN: 01.14
-FECHA: 09/02/2026 10:26 (UTC-5)
+VERSIÓN: 01.15
+FECHA: 09/02/2026 11:00 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -304,6 +304,39 @@ button {
 }
 /* MOD-002-S07: FIN */
 
+/* MOD-002-S07A: CONTROLES DE APLICACIÓN [INICIO] */
+/* Contenedor para botón "Aplicar Cambio" y checkbox de reenumeración */
+.aplicar-controls {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Estilos para checkbox de reenumeración en modo Agregar MOD */
+.agregar-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+.agregar-checkbox-wrapper input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent-green);
+}
+
+.agregar-checkbox-wrapper label {
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-primary);
+}
+/* MOD-002-S07A: FIN */
+
 /* MOD-002-S08: TOAST / NOTIFICACIONES [INICIO] */
 .toast {
   position: fixed;
@@ -441,6 +474,11 @@ button {
 DESCRIPCIÓN:
 Estilos CSS de CodeWorkShop alineados a estándar v2.3.
 
+VERSIÓN: 01.15
+- Agregado MOD-002-S07A con estilos para .aplicar-controls y .agregar-checkbox-wrapper
+- Estilos específicos para checkbox de reenumeración en modo Agregar MOD
+- Accent color verde para diferenciar de modo Eliminar (rojo)
+
 CLAVES TÉCNICAS:
 - CSS monolítico dentro de <style> (decisión intencional)
 - Delimitadores MOD-XXX solo en comentarios HTML externos
@@ -453,5 +491,6 @@ COMPATIBILIDAD:
 
 ESTADO:
 ✔ Alineado 100% con CodeWorkShop v2.3
+✔ Soporta checkboxes de reenumeración en Eliminar y Agregar
 -->
 <!-- MOD-099: FIN -->
