@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.66
-FECHA: 09/02/2026 10:06 (UTC-5)
+VERSIÓN: 01.67
+FECHA: 09/02/2026 11:00 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -923,11 +923,29 @@ function reemplazarMultiplesModulos(codigoCompleto, textoMultiMod) {
  * @param {string} nuevoTexto - Código con 1+ módulos a procesar  
  * @return {Object} {success, codigo?, accionRealizada, modulosProcesados?, error?}
  */
-function agregarModuloNuevo(codigoCompleto, nuevoTexto) {
+// MOD-015: AGREGAR MÓDULO NUEVO HÍBRIDO V6.0 [INICIO]
+/**
+ * Agrega o reemplaza módulos de forma híbrida.
+ * VERSIÓN 6.0: Acepta parámetro reenumerar
+ *
+ * LÓGICA:
+ * 1. Si el ID ya existe → REEMPLAZO
+ * 2. Si el ID NO existe → AGREGADO
+ * 3. Si reenumerar=true → Ejecuta reenumeración completa al final
+ *
+ * @param {string} codigoCompleto - Código original
+ * @param {string} nuevoTexto - Módulo(s) a agregar/reemplazar
+ * @param {boolean} reenumerar - Si debe reenumerar después (opcional, default: false)
+ * @return {Object} {success, codigo, accionRealizada, modulosProcesados, reenumerado}
+ */
+function agregarModuloNuevo(codigoCompleto, nuevoTexto, reenumerar) {
   try {
     if (!codigoCompleto || !nuevoTexto) {
       return { success: false, error: 'Parámetros incompletos' };
     }
+    
+    // 🔹 Valor por defecto para reenumerar
+    const debeReenumerar = reenumerar === true;
 
     // 🔹 ETAPA 1: Parsear módulos existentes y nuevos
     const modulosExistentes = parsearModulos(codigoCompleto);
@@ -1040,7 +1058,23 @@ function agregarModuloNuevo(codigoCompleto, nuevoTexto) {
     }
 
     const totalProcesados = reemplazos.length + agregados.length;
-    Logger.log(`✅ MOD-015 v5.0: ${totalProcesados} módulo(s) procesado(s) exitosamente`);
+    
+    // 🆕 ETAPA 5: Reenumerar si fue solicitado
+    let reenumeracionRealizada = false;
+    if (debeReenumerar) {
+      const resultadoRenum = reenumerarModulosCompleto(codigoActualizado);
+      
+      if (resultadoRenum.success && resultadoRenum.codigo) {
+        codigoActualizado = resultadoRenum.codigo;
+        reenumeracionRealizada = true;
+        Logger.log('✅ MOD-015: Reenumeración completada después de agregar');
+      } else if (resultadoRenum.mensaje) {
+        // No había cambios necesarios, pero no es error
+        Logger.log(`ℹ️ MOD-015: ${resultadoRenum.mensaje}`);
+      }
+    }
+    
+    Logger.log(`✅ MOD-015 v6.0: ${totalProcesados} módulo(s) procesado(s) exitosamente`);
 
     return {
       success: true,
@@ -1048,11 +1082,12 @@ function agregarModuloNuevo(codigoCompleto, nuevoTexto) {
       accionRealizada: accionRealizada,
       modulosProcesados: totalProcesados,
       reemplazos: reemplazos.length,
-      agregados: agregados.length
+      agregados: agregados.length,
+      reenumerado: reenumeracionRealizada
     };
 
   } catch (error) {
-    Logger.log('❌ Error MOD-015 v5.0: ' + error.message);
+    Logger.log('❌ Error MOD-015 v6.0: ' + error.message);
     return { success: false, error: error.message };
   }
 }
