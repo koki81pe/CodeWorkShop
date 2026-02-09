@@ -3,8 +3,8 @@
 ******************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: index.html
-VERSIÓN: 01.20
-FECHA: 09/02/2026 11:00 (UTC-5)
+VERSIÓN: 01.22
+FECHA: 09/02/2026 14:00 (UTC-5)
 ******************************************
 -->
 <!-- MOD-001: FIN -->
@@ -40,10 +40,6 @@ FECHA: 09/02/2026 11:00 (UTC-5)
             title="Copia el estándar CodeWorkShop para entrenar IAs">
       📋 Copiar Estándar
     </button>
-    <button class="btn-secondary" onclick="reenumerarCodigo()"
-            title="Reenumera los módulos desde el primer intermedio detectado">
-      🔢 Reenumerar
-    </button>
   </div>
 </div>
 <!-- MOD-004: FIN -->
@@ -63,13 +59,17 @@ FECHA: 09/02/2026 11:00 (UTC-5)
   </div>
   <div class="button-group">
     <button class="btn-primary" onclick="analizarModulos('multiMod')">
-      📦 Multi MOD
+      🔄 Swap MOD
     </button>
     <button class="btn-primary" onclick="analizarModulos('nuevoMod')">
-      ➕ Agregar MOD
+      ✨ Swap+Add
+    </button>
+    <button class="btn-info" onclick="reenumerarCodigo()"
+            title="Reenumera los módulos desde el primer intermedio detectado">
+      # Renumber
     </button>
     <button class="btn-danger" onclick="analizarModulos('eliminarMod')">
-      🗑️ Eliminar MOD
+      🗑️ Delete
     </button>
   </div>
 </div>
@@ -204,34 +204,37 @@ FECHA: 09/02/2026 11:00 (UTC-5)
 <!--
 DESCRIPCIÓN:
 Página principal (contenedor UI) de CodeWorkShop.
-Interfaz con 3 botones principales: Multi MOD, Agregar MOD y Eliminar MOD.
+Interfaz con 4 botones principales: Swap MOD, Swap+Add, Renumber y Delete.
 
-VERSIÓN: 01.20
-- Agregado checkbox "Reenumerar después de agregar" en Sección 4
-- Checkbox visible solo en modo "Agregar MOD"
-- Mantiene checkbox de reenumeración en Sección 2 para modo "Eliminar MOD"
-- IDs diferenciados: checkReenumEliminar (Sección 2) y checkReenumAgregar (Sección 4)
+VERSIÓN: 01.21
+- Actualizado nombres de botones: Multi MOD → Swap MOD, Agregar MOD → Swap+Add, Eliminar MOD → Delete
+- Reubicado botón Renumber del header a la sección de botones principales (entre Swap+Add y Delete)
+- Removido botón Reenumerar del header (MOD-004)
+- Agregado botón Renumber en button-group de MOD-005
+- Conservada toda la funcionalidad de checkbox de reenumeración en Secciones 2 y 4
 
 ESTÁNDAR:
 - SOPORTE COMPLETO CodeWorkShop v3
 
 INTEGRACIÓN CON BACKEND:
 - Compatible con backend code.gs v01.67+
-- Multi MOD: reemplazarMultiplesModulos()
-- Agregar MOD: agregarModuloNuevo() v6.0 (con reenumeración)
-- Eliminar MOD: eliminarModulos() (con reenumeración)
+- Swap MOD (Multi MOD): reemplazarMultiplesModulos()
+- Swap+Add (Agregar MOD): agregarModuloNuevo() v6.0 (con reenumeración)
+- Delete (Eliminar MOD): eliminarModulos() (con reenumeración)
+- Renumber: reenumerarModulosCompleto()
 
 FLUJO DE TRABAJO:
 1. Usuario carga código original
-2. Selecciona modo: Multi MOD, Agregar MOD o Eliminar MOD
+2. Selecciona modo: Swap MOD, Swap+Add o Delete
 3. Ve lista de módulos detectados
-4. Para Agregar MOD: opcionalmente marca checkbox de reenumeración
+4. Para Swap+Add: opcionalmente marca checkbox de reenumeración
 5. Pega módulo(s) nuevo(s)
 6. Backend procesa según modo (con o sin reenumeración)
 7. Sistema muestra resultado final
+8. Opcionalmente puede ejecutar Renumber independiente
 
 DEPENDENCIAS:
-- style.html v01.14+
+- style.html v01.16+
 - scripts.html v01.37+
 - Backend code.gs v01.67+
 -->
