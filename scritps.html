@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.36
-FECHA: 10/02/2026 10:46 (UTC-5)
+VERSIÓN: 01.37
+FECHA: 09/02/2026 11:00 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -163,10 +163,17 @@ function toggleModulos() {
 }
 
 function configurarModoEdicion(modo) {
+  const checkboxAgregar = document.getElementById('checkboxReenumAgregar');
+  
   if (modo === 'eliminarMod') {
     // MODO ELIMINAR: No mostrar Sección 3 ni 4
     document.getElementById('seccionModuloActual').style.display = 'none';
     document.getElementById('seccionNuevoModulo').style.display = 'none';
+    
+    // Ocultar checkbox de agregar
+    if (checkboxAgregar) {
+      checkboxAgregar.style.display = 'none';
+    }
   } else {
     // MODO NORMAL: Mostrar y expandir sección de nuevo módulo
     document.getElementById('seccionNuevoModulo').style.display = 'block';
@@ -174,6 +181,11 @@ function configurarModoEdicion(modo) {
     const btnCollapseSec4 = document.getElementById('btnCollapseSec4');
     contenidoSec4.classList.remove('collapsed');
     btnCollapseSec4.textContent = '▼';
+    
+    // 🆕 Mostrar checkbox solo en modo "Agregar MOD"
+    if (checkboxAgregar) {
+      checkboxAgregar.style.display = modo === 'nuevoMod' ? 'flex' : 'none';
+    }
   }
 }
 // MOD-002-S04: FIN
@@ -300,7 +312,7 @@ function mostrarCargando(show) {
 console.log('✅ Scripts CodeWorkShop v01.33 cargados');
 // MOD-002-S08: FIN
 
-// MOD-002-S09: AGREGAR MOD HÍBRIDO V2 [INICIO]
+// MOD-002-S09: AGREGAR MOD HÍBRIDO V3 [INICIO]
 function aplicarCambioNuevo() {
   const nuevoModulo = document.getElementById('multiModulo').value;
   
@@ -308,6 +320,9 @@ function aplicarCambioNuevo() {
     mostrarNotificacion('⚠️ Pega los módulos en el área inferior', 'warning');
     return;
   }
+
+  // 🆕 Capturar checkbox de reenumeración
+  const reenumerar = document.getElementById('checkReenumAgregar').checked;
 
   mostrarCargando(true);
 
@@ -321,17 +336,25 @@ function aplicarCambioNuevo() {
       document.getElementById('codigoResultante').value = res.codigo;
       document.getElementById('seccionResultado').style.display = 'block';
       
+      // 🆕 Mensaje mejorado con información de reenumeración
+      let mensaje = '';
       if (res.accionRealizada === 'reemplazado') {
-        mostrarNotificacion('✅ Módulo(s) reemplazado(s)', 'success');
+        mensaje = '✅ Módulo(s) reemplazado(s)';
       } else {
-        mostrarNotificacion(`✅ ${res.modulosProcesados} módulo(s) procesado(s)`, 'success');
+        mensaje = `✅ ${res.modulosProcesados} módulo(s) procesado(s)`;
       }
+      
+      if (reenumerar && res.reenumerado) {
+        mensaje += ' + reenumerado';
+      }
+      
+      mostrarNotificacion(mensaje, 'success');
     })
     .withFailureHandler(err => {
       mostrarCargando(false);
       mostrarNotificacion('❌ Error del servidor: ' + err, 'error');
     })
-    .agregarModuloNuevo(codigoOriginal, nuevoModulo);
+    .agregarModuloNuevo(codigoOriginal, nuevoModulo, reenumerar);
 }
 // MOD-002-S09: FIN
 
@@ -541,7 +564,7 @@ function confirmarEliminacion() {
     return;
   }
   
-  const reenumerar = document.getElementById('checkReenum').checked;
+  const reenumerar = document.getElementById('checkReenumEliminar').checked;
   const cantidad = modulosAEliminar.length;
   
   // Construir mensaje
@@ -648,34 +671,30 @@ function confirmarModal() {
 DESCRIPCIÓN:
 Frontend de CodeWorkShop. Captura código, envía al backend y muestra resultados.
 
-VERSIÓN: 01.32
-- Eliminado solo el botón "MOD x MOD"
-- Conservadas todas las funciones de visualización: mostrarModulos(), 
-  seleccionarModulo(), toggleModulos(), toggleSeccion3()
-- Conservadas variables: moduloSeleccionado, modulosDetectados
-- Ambos botones (Multi MOD y Agregar MOD) comparten:
-  * Lista de módulos con clicks
-  * Visualización de código actual
-  * Textarea único para nuevos módulos
-- Simplificado aplicarCambio(): solo 2 modos (multiMod, nuevoMod)
-- Actualizado toggles: secciones 1, 3, 4, 5
+VERSIÓN: 01.37
+- Agregado checkbox de reenumeración para modo "Agregar MOD"
+- Modificada configurarModoEdicion() para mostrar/ocultar checkbox según modo
+- Modificada aplicarCambioNuevo() v3 para capturar checkbox y pasar parámetro al backend
+- Actualizado ID checkReenum → checkReenumEliminar para diferenciar de checkReenumAgregar
+- Conservadas todas las funciones de visualización y eliminación
 
 RESPONSABILIDAD:
 - Captura código del usuario
 - Envía a code.gs para procesamiento
 - Muestra resultados y estadísticas
-- Gestiona UI de Multi MOD y Agregar MOD
+- Gestiona UI de Multi MOD, Agregar MOD (con reenumeración) y Eliminar MOD (con reenumeración)
 
 INTEGRACIÓN:
-Backend code.gs v01.29:
+Backend code.gs v01.67:
 - MOD-006 v7.0: Detección ultra agnóstica + conteo de líneas
 - MOD-008 v4.0: Validación dinámica
 - MOD-009 v6.0: Reemplazo ultra agnóstico
 - MOD-014: reemplazarMultiplesModulos()
-- MOD-015 v5.0: agregarModuloNuevo() híbrido
+- MOD-015 v6.0: agregarModuloNuevo() con parámetro reenumerar
+- MOD-016: eliminarModulos() con parámetro reenumerar
 
 ESTADO:
-Compatible con index.html v01.17
-Compatible con backend ultra agnóstico v01.29
+Compatible con index.html v01.20
+Compatible con backend ultra agnóstico v01.67
 -->
 <!-- MOD-099: FIN -->
