@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: scripts.html
-VERSIÓN: 01.37
-FECHA: 09/02/2026 11:00 (UTC-5)
+VERSIÓN: 01.38
+FECHA: 10/02/2026 15:40 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -12,16 +12,16 @@ FECHA: 09/02/2026 11:00 (UTC-5)
 <!-- MOD-002: SCRIPT PRINCIPAL [INICIO] -->
 <script>
 
-// MOD-002-S01: VARIABLES GLOBALES [INICIO]
+// MOD-002-001: VARIABLES GLOBALES [INICIO]
 let codigoOriginal = '';
 let modulosDetectados = [];
 let moduloSeleccionado = null;
 let modoEdicion = null; // 'multiMod', 'nuevoMod' o 'eliminarMod'
 let modulosAEliminar = []; // IDs de módulos marcados para eliminar
-// MOD-002-S01: FIN
+// MOD-002-001: FIN
 
 
-  // MOD-002-S02: UTILIDADES GENERALES [INICIO]
+  // MOD-002-002: UTILIDADES GENERALES [INICIO]
 
   // UTILIDAD: ESCAPAR HTML (SOLO UI GENERAL)
   // ⚠️ NO USAR PARA MODS
@@ -31,10 +31,10 @@ let modulosAEliminar = []; // IDs de módulos marcados para eliminar
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
   }
-  // MOD-002-S02: FIN
+  // MOD-002-002: FIN
 
 
-// MOD-002-S03: ANALISIS DE MODULOS V3 [INICIO]
+// MOD-002-003: ANALISIS DE MODULOS V3 [INICIO]
 
 function analizarModulos(modo) {
   const codigo = document.getElementById('codigoOriginal').value;
@@ -87,9 +87,9 @@ function analizarModulos(modo) {
     .parsearModulos(codigo);
 }
 
-// MOD-002-S03: FIN
+// MOD-002-003: FIN
 
-// MOD-002-S04: UI – LISTADO Y SELECCION DE MODS V4 [INICIO]
+// MOD-002-004: UI – LISTADO Y SELECCION DE MODS V4 [INICIO]
 function mostrarModulos(modulos) {
   const lista = document.getElementById('listaModulos');
   lista.innerHTML = '';
@@ -188,9 +188,9 @@ function configurarModoEdicion(modo) {
     }
   }
 }
-// MOD-002-S04: FIN
+// MOD-002-004: FIN
 
-// MOD-002-S05: REEMPLAZO DE MODULOS [INICIO]
+// MOD-002-005: REEMPLAZO DE MODULOS [INICIO]
 function aplicarCambio() {
   if (!codigoOriginal) {
     mostrarNotificacion('⚠️ Falta código original', 'warning');
@@ -239,10 +239,10 @@ function aplicarCambioMultiple() {
       multiModulo
     );
 }
-// MOD-002-S05: FIN
+// MOD-002-005: FIN
 
 
-// MOD-002-S06: UTILIDADES UI V2 [INICIO]
+// MOD-002-006: UTILIDADES UI V2 [INICIO]
 function copiarResultado() {
   navigator.clipboard.writeText(
     document.getElementById('codigoResultante').value
@@ -268,10 +268,10 @@ function mostrarCargando(show) {
     .getElementById('loading')
     .classList.toggle('show', show);
 }
-// MOD-002-S06: FIN
+// MOD-002-006: FIN
 
 
-// MOD-002-S07: ACCIONES DE HEADER [INICIO]
+// MOD-002-007: ACCIONES DE HEADER [INICIO]
   function copiarUrlPdfEstandar() {
     const urlPdf =
       'https://docs.google.com/document/d/1vbbaAPpTN9nQed_OOtoQBIp9K3PfNn5wgXWhNELAhqA/export?format=pdf';
@@ -305,14 +305,14 @@ function mostrarCargando(show) {
       })
       .obtenerEstandar();
   }
-  // MOD-002-S07: FIN
+  // MOD-002-007: FIN
 
 
-// MOD-002-S08: LOG Y ARRANQUE [INICIO]
+// MOD-002-008: LOG Y ARRANQUE [INICIO]
 console.log('✅ Scripts CodeWorkShop v01.33 cargados');
-// MOD-002-S08: FIN
+// MOD-002-008: FIN
 
-// MOD-002-S09: AGREGAR MOD HÍBRIDO V3 [INICIO]
+// MOD-002-009: AGREGAR MOD HÍBRIDO V3 [INICIO]
 function aplicarCambioNuevo() {
   const nuevoModulo = document.getElementById('multiModulo').value;
   
@@ -356,9 +356,9 @@ function aplicarCambioNuevo() {
     })
     .agregarModuloNuevo(codigoOriginal, nuevoModulo, reenumerar);
 }
-// MOD-002-S09: FIN
+// MOD-002-009: FIN
 
-// MOD-002-S10: REENUMERAR CÓDIGO [INICIO]
+// MOD-002-010: REENUMERAR CÓDIGO [INICIO]
 /**
  * Reenumera todos los módulos del código cargado.
  * Ejecuta el proceso completo en 3 etapas:
@@ -411,9 +411,9 @@ function reenumerarCodigo() {
     })
     .reenumerarModulosCompleto(codigo);
 }
-// MOD-002-S10: FIN
+// MOD-002-010: FIN
 
-// MOD-002-S11: FUNCIONES TOGGLE SECCIONES [INICIO]
+// MOD-002-011: FUNCIONES TOGGLE SECCIONES [INICIO]
 /**
  * Funciones para colapsar/expandir secciones 1, 3, 4, 5.
  * Mantiene botones visibles, solo colapsa contenido.
@@ -470,9 +470,9 @@ function toggleSeccion5() {
     btnCollapse.textContent = '▼';
   }
 }
-// MOD-002-S11: FIN
+// MOD-002-011: FIN
 
-// MOD-002-S12: ELIMINAR MÓDULOS [INICIO]
+// MOD-002-012: ELIMINAR MÓDULOS [INICIO]
 /**
  * Renderiza lista de módulos con checkboxes para modo eliminación.
  * Oculta Sección 3 y muestra controles de eliminación.
@@ -619,9 +619,9 @@ function ejecutarEliminacion(reenumerar) {
     })
     .eliminarModulos(codigoOriginal, idsAEliminar, reenumerar);
 }
-// MOD-002-S12: FIN
+// MOD-002-012: FIN
 
-// MOD-002-S13: MODAL DE CONFIRMACIÓN [INICIO]
+// MOD-002-013: MODAL DE CONFIRMACIÓN [INICIO]
 let modalCallback = null;
 
 /**
@@ -661,7 +661,7 @@ function confirmarModal() {
     callback();
   }
 }
-// MOD-002-S13: FIN
+// MOD-002-013: FIN
 
 </script>
 <!-- MOD-002: FIN -->
