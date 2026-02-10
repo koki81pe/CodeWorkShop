@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: style.html
-VERSIÓN: 01.20
-FECHA: 09/02/2026 14:34 (UTC-5)
+VERSIÓN: 01.21
+FECHA: 10/02/2026 15:40 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
@@ -12,7 +12,7 @@ FECHA: 09/02/2026 14:34 (UTC-5)
 <!-- MOD-002: APERTURA STYLE [INICIO] -->
 <style>
 
-/* MOD-002-S01: VARIABLES DE COLOR (GitHub Dark) [INICIO] */
+/* MOD-002-001: VARIABLES DE COLOR (GitHub Dark) [INICIO] */
 :root {
   --bg-primary: #0d1117;
   --bg-secondary: #161b22;
@@ -37,10 +37,10 @@ FECHA: 09/02/2026 14:34 (UTC-5)
   --warning: #d29922;
   --info: #1f6feb;
 }
-/* MOD-002-S01: FIN */
+/* MOD-002-001: FIN */
 
 
-/* MOD-002-S02: RESET Y BASE [INICIO] */
+/* MOD-002-002: RESET Y BASE [INICIO] */
 * {
   margin: 0;
   padding: 0;
@@ -54,9 +54,9 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
 }
-/* MOD-002-S02: FIN */
+/* MOD-002-002: FIN */
 
-/* MOD-002-S03: CONTENEDOR Y HEADER [INICIO] */
+/* MOD-002-003: CONTENEDOR Y HEADER [INICIO] */
 .container {
   max-width: 1400px;
   margin: 0 auto;
@@ -89,9 +89,9 @@ body {
   gap: 12px;
   flex-wrap: wrap;
 }
-/* MOD-002-S03: FIN */
+/* MOD-002-003: FIN */
 
-/* MOD-002-S04: SECCIONES [INICIO] */
+/* MOD-002-004: SECCIONES [INICIO] */
 .section {
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
@@ -105,9 +105,9 @@ body {
   font-weight: 600;
   margin-bottom: 16px;
 }
-/* MOD-002-S04: FIN */
+/* MOD-002-004: FIN */
 
-/* MOD-002-S05: ÁREA DE CÓDIGO [INICIO] */
+/* MOD-002-005: ÁREA DE CÓDIGO [INICIO] */
 .code-area {
   width: 100%;
   height: 200px;
@@ -128,9 +128,9 @@ body {
   border-color: var(--accent-blue);
   outline: none;
 }
-/* MOD-002-S05: FIN */
+/* MOD-002-005: FIN */
 
-/* MOD-002-S06: BOTONES [INICIO] */
+/* MOD-002-006: BOTONES [INICIO] */
 button {
   padding: 8px 16px;
   border-radius: 6px;
@@ -192,9 +192,9 @@ button {
     background: #c82333;
   }
 }
-/* MOD-002-S06: FIN */
+/* MOD-002-006: FIN */
 
-/* MOD-002-S07: LISTA DE MÓDULOS [INICIO] */
+/* MOD-002-007: LISTA DE MÓDULOS [INICIO] */
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -312,9 +312,9 @@ button {
   cursor: pointer;
   user-select: none;
 }
-/* MOD-002-S07: FIN */
+/* MOD-002-007: FIN */
 
-/* MOD-002-S08: CONTROLES DE APLICACIÓN [INICIO] */
+/* MOD-002-008: CONTROLES DE APLICACIÓN [INICIO] */
 /* Contenedor para botón "Aplicar Cambio" y checkbox de reenumeración */
 .aplicar-controls {
   margin-top: 16px;
@@ -350,9 +350,9 @@ button {
   user-select: none;
   color: var(--text-primary);
 }
-/* MOD-002-S08: FIN */
+/* MOD-002-008: FIN */
 
-/* MOD-002-S09: TOAST / NOTIFICACIONES [INICIO] */
+/* MOD-002-009: TOAST / NOTIFICACIONES [INICIO] */
 .toast {
   position: fixed;
   bottom: -100px;
@@ -371,9 +371,9 @@ button {
 .toast.error   { border-color: var(--error); }
 .toast.warning { border-color: var(--warning); }
 .toast.info    { border-color: var(--info); }
-/* MOD-002-S09: FIN */
+/* MOD-002-009: FIN */
 
-/* MOD-002-S10: LOADING OVERLAY [INICIO] */
+/* MOD-002-010: LOADING OVERLAY [INICIO] */
 .loading-overlay {
   display: none;
   position: fixed;
@@ -402,9 +402,9 @@ button {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-/* MOD-002-S10: FIN */
+/* MOD-002-010: FIN */
 
-/* MOD-002-S11: RESPONSIVE [INICIO] */
+/* MOD-002-011: RESPONSIVE [INICIO] */
 @media (max-width: 1023px) {
   .header-actions button,
   button {
@@ -416,9 +416,9 @@ button {
     height: 300px;
   }
 }
-/* MOD-002-S11: FIN */
+/* MOD-002-011: FIN */
 
-/* MOD-002-S12: CONTENIDO COLAPSABLE GENÉRICO [INICIO] */
+/* MOD-002-012: CONTENIDO COLAPSABLE GENÉRICO [INICIO] */
 .collapsible-content {
   transition: max-height 0.3s ease, opacity 0.3s ease;
   overflow: hidden;
@@ -429,9 +429,9 @@ button {
   max-height: 0;
   opacity: 0;
 }
-/* MOD-002-S12: FIN */
+/* MOD-002-012: FIN */
 
-/* MOD-002-S13: MODAL DE CONFIRMACIÓN [INICIO] */
+/* MOD-002-013: MODAL DE CONFIRMACIÓN [INICIO] */
 .modal-overlay {
   display: none;
   position: fixed;
@@ -479,7 +479,7 @@ button {
 .modal-actions button {
   min-width: 100px;
 }
-/* MOD-002-S13: FIN */
+/* MOD-002-013: FIN */
 
 </style>
 <!-- MOD-002: FIN -->
