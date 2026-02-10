@@ -3,8 +3,8 @@
 *****************************************
 PROYECTO: CodeWorkShop
 ARCHIVO: code.gs
-VERSIÓN: 01.67
-FECHA: 09/02/2026 11:00 (UTC-5)
+VERSIÓN: 01.68
+FECHA: 10/02/2026 15:39 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
@@ -906,7 +906,7 @@ function reemplazarMultiplesModulos(codigoCompleto, textoMultiMod) {
 
 // MOD-015: AGREGAR MODULO HÍBRIDO V5 [INICIO]
 
-// MOD-015-S01: FUNCIÓN PRINCIPAL HÍBRIDA V5 [INICIO]
+// MOD-015-001: FUNCIÓN PRINCIPAL HÍBRIDA V5 [INICIO]
 /**
  * Función híbrida inteligente: REEMPLAZA si existe, AGREGA si es nuevo.
  * 
@@ -1091,10 +1091,10 @@ function agregarModuloNuevo(codigoCompleto, nuevoTexto, reenumerar) {
     return { success: false, error: error.message };
   }
 }
-// MOD-015-S01: FIN
+// MOD-015-001: FIN
 
 
-// MOD-015-S02: AGREGAR MÓDULO INDIVIDUAL [INICIO]
+// MOD-015-002: AGREGAR MÓDULO INDIVIDUAL [INICIO]
 /**
  * Agrega un módulo nuevo usando regla simple de líneas.
  * 
@@ -1175,10 +1175,10 @@ function agregarModuloIndividual(codigoCompleto, modNuevo, modulosExistentes) {
     return { success: false, error: error.message };
   }
 }
-// MOD-015-S02: FIN
+// MOD-015-002: FIN
 
 
-// MOD-015-S03: ENCONTRAR ANTECESOR [INICIO]
+// MOD-015-003: ENCONTRAR ANTECESOR [INICIO]
 /**
  * Encuentra el antecesor (ID inmediatamente anterior) de un módulo.
  * Funciona igual para padres e hijos.
@@ -1261,10 +1261,10 @@ function encontrarAntecesor(idBuscar, modulos) {
       : { existe: false };
   }
 }
-// MOD-015-S03: FIN
+// MOD-015-003: FIN
 
 
-// MOD-015-S04: UTILIDADES DE PARSING [INICIO]
+// MOD-015-004: UTILIDADES DE PARSING [INICIO]
 /**
  * Extrae número base del ID (MOD-005 → 5, MOD-004-S01 → 4)
  */
@@ -1287,10 +1287,10 @@ function extraerNumeroSubmodulo(id) {
 function esPrimeroValido(id) {
   return extraerNumeroBase(id) === 1;
 }
-// MOD-015-S04: FIN
+// MOD-015-004: FIN
 
 
-// MOD-015-S05: ENCONTRAR POSICIONES [INICIO]
+// MOD-015-005: ENCONTRAR POSICIONES [INICIO]
 /**
  * Encuentra posición exacta del FIN de un módulo.
  * Retorna la posición INCLUYENDO el salto de línea final.
@@ -1344,10 +1344,10 @@ function encontrarPosicionInicioModulo(codigo, idModulo) {
   
   return -1;
 }
-// MOD-015-S05: FIN
+// MOD-015-005: FIN
 
 
-// MOD-015-S06: NORMALIZAR ESPACIADO [INICIO]
+// MOD-015-006: NORMALIZAR ESPACIADO [INICIO]
 /**
  * Normaliza el espaciado de todos los módulos del código.
  * Asegura 1 línea en blanco después de cada delimitador FIN.
@@ -1396,10 +1396,10 @@ function normalizarEspaciadoModulos(codigo) {
     return codigo; // Retornar código original si falla
   }
 }
-// MOD-015-S06: FIN
+// MOD-015-006: FIN
 
 
-// MOD-015-S07: ENCONTRAR SUCESOR [INICIO]
+// MOD-015-007: ENCONTRAR SUCESOR [INICIO]
 /**
  * Encuentra el sucesor (ID inmediatamente siguiente) de un módulo.
  * Funciona igual para padres e hijos.
@@ -1475,7 +1475,7 @@ function encontrarSucesor(idBuscar, modulos) {
       : { existe: false };
   }
 }
-// MOD-015-S07: FIN
+// MOD-015-007: FIN
 
 // MOD-015: FIN
 
@@ -1543,7 +1543,7 @@ function reenumerarPadres(modulos, padresNuevos) {
 }
 // MOD-016: FIN
 
-// MOD-016-S01: FUNCIÓN PRINCIPAL REENUMERADOR [INICIO]
+// MOD-016-001: FUNCIÓN PRINCIPAL REENUMERADOR [INICIO]
 /**
  * Reenumera todos los módulos desde el primer intermedio detectado.
  * Cierra gaps automáticamente y convierte el último MOD a MOD-099.
@@ -1624,9 +1624,9 @@ function reenumerarModulos(codigoCompleto) {
     return { success: false, error: error.message };
   }
 }
-// MOD-016-S01: FIN
+// MOD-016-001: FIN
 
-// MOD-016-S02: DETECTAR PRIMER INTERMEDIO [INICIO]
+// MOD-016-002: DETECTAR PRIMER INTERMEDIO [INICIO]
 /**
  * Detecta el primer módulo con letra (intermedio).
  * Busca tanto en MODs padres como en SubMODs.
@@ -1687,9 +1687,9 @@ function detectarPrimerIntermedio(modulos) {
     return { encontrado: false };
   }
 }
-// MOD-016-S02: FIN
+// MOD-016-002: FIN
 
-// MOD-016-S03: GENERAR MAPEO COMPLETO [INICIO]
+// MOD-016-003: GENERAR MAPEO COMPLETO [INICIO]
 /**
  * Genera mapeo completo de reenumeración.
  * 
@@ -1821,9 +1821,9 @@ function generarMapeoHijosLocales(modulos, puntoInicio, mapeo) {
     }
   }
 }
-// MOD-016-S03: FIN
+// MOD-016-003: FIN
 
-// MOD-016-S04: APLICAR REENUMERACIÓN [INICIO]
+// MOD-016-004: APLICAR REENUMERACIÓN [INICIO]
 /**
  * Aplica el mapeo de reenumeración al código completo.
  * ULTRA AGNÓSTICO: Detecta dinámicamente prefijo/sufijo de cada módulo.
@@ -1953,9 +1953,9 @@ function extraerNumeroCompleto(id) {
   // Fórmula: base + (letra/100) + (sub/1000) + (letraSub/100000)
   return numBase + (letraBase / 100) + (numSub / 1000) + (letraSub / 100000);
 }
-// MOD-016-S04: FIN
+// MOD-016-004: FIN
 
-// MOD-016-S05: CONVERTIR ÚLTIMO A 099 [INICIO]
+// MOD-016-005: CONVERTIR ÚLTIMO A 099 [INICIO]
 /**
  * Convierte el último MOD padre a MOD-099.
  * 
@@ -2040,7 +2040,7 @@ function convertirUltimoA099(codigo) {
     return codigo;
   }
 }
-// MOD-016-S05: FIN
+// MOD-016-005: FIN
 
 // MOD-017: RENUMERAR HIJOS [INICIO]
 /**
