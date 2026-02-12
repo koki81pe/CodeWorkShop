@@ -1,744 +1,1187 @@
-STANDAR CODEWORKSHOP v5.0
-De: Jorge A. Baudouin 
-Formato de código modular para modificaciones quirúrgicas mediante delimitadores explícitos
- 
- 
- 
-ÍNDICE
- 
-PARTE 1: GUÍA
-1. Introducción
-2. Conceptos Básicos
-3. Estructura Obligatoria
-4. Sintaxis por Lenguaje
-5. Ejemplos Completos
- 
-PARTE 2: REGLAS E INSTRUCCIONES
-6. Reglas de Ejecución
- 
- 
- 
+═══════════════════════════════════════════════════════════════════════════════
+STANDARD CODEWORKSHOP V6
+De: Jorge A. Baudouin
+Formato de código modular universal para modificaciones quirúrgicas
+mediante delimitadores explícitos
+═══════════════════════════════════════════════════════════════════════════════
 
- 
-PARTE 1: GUÍA
- 
+ÍNDICE
+
+0. GUÍA RÁPIDA (Lee esto primero)
+PARTE 1: FUNDAMENTOS
+1. Introducción
+2. Módulos Nivel 1 (El Caso Normal)
+3. Estructura Obligatoria SIMPLIFICADA
+4. Símbolos de Comentario por Lenguaje
+PARTE 2: CASOS ESPECIALES
+5. Multinivel (Solo cuando es obligatorio)
+6. Ejemplos Completos
+PARTE 3: REGLAS EJECUTABLES
+7. Reglas de Ejecución
+
+
+═══════════════════════════════════════════════════════════════════════════════
+0. GUÍA RÁPIDA
+═══════════════════════════════════════════════════════════════════════════════
+
+LEE ESTO PRIMERO - CHECKLIST PARA MODULAR UN ARCHIVO
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PASO 1: Identificar el lenguaje                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ¿Qué lenguaje es el archivo?                                               │
+│ → Busca el símbolo en Tabla 4.1 (Sección 4)                               │
+│                                                                             │
+│ Ejemplos:                                                                   │
+│ • JavaScript/Java/C++ → //                                                 │
+│ • Python/Ruby/Bash → #                                                     │
+│ • HTML → <!-- -->                                                          │
+│ • SQL → --                                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PASO 2: Crear estructura básica                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ INSTRUCCIÓN: Crea SOLO estos módulos:                                      │
+│                                                                             │
+│ 1. MOD-001: ENCABEZADO (obligatorio, primero)                              │
+│    - Contiene: PROYECTO, ARCHIVO, VERSIÓN, FECHA                           │
+│                                                                             │
+│ 2. MOD-002, MOD-003, MOD-004... : CÓDIGO FUNCIONAL                         │
+│    - Numeración consecutiva SIN SALTOS                                     │
+│    - Cada módulo ≤75 líneas                                                │
+│                                                                             │
+│ 3. MOD-XXX: NOTAS (obligatorio, último)                                    │
+│    - Máximo 20 líneas                                                      │
+│    - Solo: Descripción, Crítico, Dependencias                              │
+│    - NO changelog ni historial                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PASO 3: Dividir el código funcional                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ INSTRUCCIÓN: Usa SOLO módulos Nivel 1 (MOD-002, MOD-003, MOD-004...)      │
+│                                                                             │
+│ ¿Cómo decidir qué va en cada módulo?                                       │
+│                                                                             │
+│ REGLA: Agrupa código que "cambia junto" por la misma razón                 │
+│                                                                             │
+│ PREGÚNTATE:                                                                 │
+│ 1. ¿Estas líneas se modifican por el mismo motivo? → Mismo módulo          │
+│ 2. ¿Cambiar A obliga a cambiar B? → Mismo módulo                          │
+│ 3. ¿Módulo > 75 líneas? → Divide en varios módulos Nivel 1                │
+│                                                                             │
+│ ANALOGÍA DEL AUTO:                                                          │
+│ ✅ BIEN: Un módulo para "Sistema de dirección completo"                   │
+│    (volante + columna + cremallera cambian juntos)                         │
+│                                                                             │
+│ ❌ MAL: Un módulo con "Dirección + Parte del motor"                       │
+│    (al cambiar dirección reescribes motor innecesariamente)                │
+│                                                                             │
+│ ✅ BIEN: Módulo pequeño para "Placa del auto"                             │
+│    (3 líneas, pero completamente independiente)                            │
+│                                                                             │
+│ ❌ MAL: Un módulo para "Un tornillo de la llanta"                         │
+│    (demasiado atómico, nunca cambiarías solo eso)                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PASO 4: ¿Necesitas multinivel?                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ INSTRUCCIÓN: NO uses multinivel SALVO que sea obligatorio                  │
+│                                                                             │
+│ ¿Cuándo es OBLIGATORIO?                                                     │
+│ → Solo cuando el símbolo de comentario DEBE cambiar                        │
+│                                                                             │
+│ CASO 1: HTML con <script>                                                  │
+│ • Fuera: <!-- MOD-004: JAVASCRIPT [INICIO] -->                            │
+│ • Dentro: // MOD-004-001: Init [INICIO]                                   │
+│ RAZÓN: No puedes usar <!-- --> dentro de <script>                         │
+│                                                                             │
+│ CASO 2: HTML con <style>                                                   │
+│ • Fuera: <!-- MOD-005: ESTILOS [INICIO] -->                               │
+│ • Dentro: /* MOD-005-001: Variables [INICIO] */                           │
+│ RAZÓN: No puedes usar <!-- --> dentro de <style>                          │
+│                                                                             │
+│ SI NO ES UNO DE ESTOS CASOS: Usa Nivel 1                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PASO 5: Verificación final                                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ VERIFICA:                                                                   │
+│ □ Todo el código está dentro de módulos                                    │
+│ □ Mismo símbolo en [INICIO] y FIN de cada módulo                          │
+│ □ Numeración consecutiva: 001, 002, 003...                                │
+│ □ MOD-001 es el primero                                                    │
+│ □ MOD-XXX (NOTAS) es el último                                             │
+│ □ Solo usaste multinivel si había cambio de símbolo                        │
+│ □ Cada módulo ≤75 líneas (excepto casos inevitables)                      │
+│ □ MOD de NOTAS ≤20 líneas (sin changelog)                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+0.1 ERRORES MÁS COMUNES (Evita estos)
+
+❌ ERROR 1: Usar multinivel para organizar
+   Incorrecto: Crear MOD-005-001, MOD-005-002 solo para "agrupar funciones"
+   Correcto: Crear MOD-005, MOD-006 (Nivel 1 separados)
+
+❌ ERROR 2: Saltos en numeración
+   Incorrecto: MOD-001 → MOD-003 (saltarse MOD-002)
+   Correcto: MOD-001 → MOD-002 → MOD-003 (consecutivo)
+
+❌ ERROR 3: Mezclar símbolos en HTML
+   Incorrecto: Usar <!-- --> dentro de <script>
+   Correcto: Usar // dentro de <script>
+
+❌ ERROR 4: Delimitadores en múltiples líneas
+   Incorrecto: """
+               MOD-005: Función [INICIO]
+               """
+   Correcto: # MOD-005: Función [INICIO]
+
+❌ ERROR 5: Código fuera de módulos
+   Incorrecto: const x = 5;  // MOD-003: [INICIO]
+   Correcto: // MOD-003: Config [INICIO]
+             const x = 5;
+             // MOD-003: FIN
+
+❌ ERROR 6: NOTAS con changelog
+   Incorrecto: MOD-010: NOTAS con historial de cambios
+   Correcto: MOD-010: NOTAS solo con descripción, crítico, dependencias
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PARTE 1: FUNDAMENTOS
+═══════════════════════════════════════════════════════════════════════════════
+
 1. INTRODUCCIÓN
- 
+
 1.1 ¿Qué es CodeWorkShop?
- 
-CodeWorkShop es un sistema de edición modular de código que permite realizar modificaciones quirúrgicas en archivos de programación mediante la sustitución de bloques delimitados.
- 
-El sistema funciona detectando módulos delimitados por comentarios especiales (MOD-XXX) y permite reemplazar bloques específicos sin tocar el resto del archivo.
- 
-1.2 Objetivo de este Estándar
- 
-Este documento es un lineamiento estándar para la programación modular, diseñado especialmente para que las IAs puedan:
- 
-•  	Modular código de forma consistente y predecible
-•  	Facilitar la edición mediante intercambio de módulos
-•  	Reducir errores al reescribir código
-•  	Minimizar uso de recursos generando solo los módulos modificados
- 
-1.3 Ventajas de la Edición Modular
- 
-1. **Precisión:** Solo se modifica el módulo específico, el resto permanece intacto
-2. **Eficiencia:** No es necesario regenerar archivos completos
-3. **Seguridad:** Reduce el riesgo de introducir errores en código no modificado
-4. **Escalabilidad:** Permite trabajar con archivos extensos de forma manejable
- 
-1.4 Principio Fundamental
- 
+
+CodeWorkShop es un sistema de edición modular de código universal que permite 
+realizar modificaciones quirúrgicas en archivos de programación mediante la 
+sustitución de bloques delimitados.
+
+El sistema funciona detectando módulos delimitados por comentarios especiales 
+(MOD-XXX) y permite reemplazar bloques específicos sin tocar el resto del archivo.
+
+Funciona con CUALQUIER lenguaje de programación que permita comentarios.
+
+
+1.2 Ventajas
+
+1. Precisión: Solo se modifica el módulo específico
+2. Eficiencia: No regenerar archivos completos
+3. Seguridad: Reduce riesgo de errores
+4. Escalabilidad: Maneja archivos extensos
+5. Universalidad: Cualquier lenguaje
+
+
+1.3 Principio Fundamental
+
 REGLA DE ORO:
- 
-Todo el código debe estar dentro de módulos MOD-XXX. Si no está dentro de un módulo, está en riesgo de perderse.
- 
- 
- 
-2. CONCEPTOS BÁSICOS
- 
-2.1 ¿Qué es un Módulo?
- 
-Un módulo es un bloque de código delimitado por comentarios especiales que identifican su inicio y fin.
- 
-Estructura básica:
- 
+Todo el código debe estar dentro de módulos MOD-XXX.
+Si no está dentro de un módulo, está en riesgo de perderse.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+2. MÓDULOS NIVEL 1 (EL CASO NORMAL)
+
+INSTRUCCIÓN PRINCIPAL: Usa SOLO módulos Nivel 1 en el 95% de los casos.
+
+
+2.1 ¿Qué es un Módulo Nivel 1?
+
+Un módulo Nivel 1 es un bloque de código delimitado:
+
+Formato:
 MOD-[ID]: [DESCRIPCIÓN] [INICIO]
 [contenido del módulo]
 MOD-[ID]: FIN
- 
- 
-2.2 Componentes de un Módulo
- 
-Cada módulo consta de tres partes obligatorias:
- 
-1. **Delimitador de inicio:** MOD-[ID]: [DESCRIPCIÓN] [INICIO]
-   - ID: Identificador numérico único (ej: 001, 002, 003)
-   - DESCRIPCIÓN: Texto breve que describe el módulo
-   - [INICIO]: Palabra literal con corchetes (obligatorio)
- 
-2. **Contenido:** El código funcional del módulo
- 
-3. **Delimitador de fin:** MOD-[ID]: FIN
-   - Debe usar el mismo ID que el inicio
 
-¿Qué es un “Delimitador”?
-Es la línea de texto que determina el inicio de un MOD y también la que determina su fin. 
+Ejemplo:
+// MOD-003: Validar email [INICIO]
+function validarEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+// MOD-003: FIN
 
-2.3 Formato de IDs
- 
-Los IDs de módulos siguen estos formatos:
- 
-Módulos principales:
-•  	MOD-001, MOD-002, MOD-003
-•  	Siempre tres dígitos
-•  	Numeración secuencial sin saltos
- 
-Submódulos (hijos):
-•  	MOD-004-S01, MOD-004-S02
-•  	Formato: MOD-[padre]-S[número]
-•  	Los hijos pertenecen a un módulo padre específico
-•  	Numeración secuencial de hijos
- 
-Orden natural:
- 
-MOD-003
-MOD-004
-MOD-004-S01
-MOD-004-S02
-MOD-005
- 
- 
-2.4 Tipos de Comentarios por Lenguaje
- 
-CodeWorkShop es agnóstico al lenguaje, pero debes respetar la sintaxis de comentarios de cada lenguaje.
- 
-Archivos .GS (JavaScript):
-•  	Delimitadores: //
-•  	Comentarios internos extra: // y /* */ 
- 
-Archivos .HTML:
-•  	Delimitadores (La línea de texto que determina el inicio de un MOD y también la que determina su fin.)
-En el código HTML: <!-- -->
-Dentro de <script>: //
-Dentro de <style>: /* */
 
-•  	Comentarios internos extra que no son Delimitadores:
-En el código HTML: Solo <!-- -->
-Dentro de <script>: // y /* */ (No usar /* */ en los delimitadores)
-Dentro de <style>:  Solo /* */
- 
- 
-3. ESTRUCTURA OBLIGATORIA
- 
-3.1 Encabezado del Archivo
- 
-Todo archivo debe iniciar con un encabezado que contiene metadatos del proyecto.
- 
-Formato obligatorio:
- 
+2.2 Componentes Obligatorios
+
+1. Delimitador de inicio:
+   - Formato: MOD-[ID]: [DESCRIPCIÓN] [INICIO]
+   - ID: Tres dígitos (001, 002, 003...)
+   - [INICIO]: Literal con corchetes
+
+2. Contenido:
+   - El código funcional
+
+3. Delimitador de fin:
+   - Formato: MOD-[ID]: FIN
+   - DEBE usar el mismo ID que el inicio
+
+
+2.3 Formato de IDs Nivel 1
+
+INSTRUCCIÓN: Usa este formato para módulos normales:
+
+MOD-001   (primero, siempre ENCABEZADO)
+MOD-002   (segundo)
+MOD-003   (tercero)
+...
+MOD-N     (último, siempre NOTAS)
+
+Reglas:
+• Tres dígitos siempre
+• Numeración consecutiva SIN SALTOS
+• Secuencia: 001, 002, 003, 004... (NO 001, 003, 005)
+
+
+2.4 Intermedios con Letra (Opcional)
+
+Si necesitas insertar un módulo entre dos consecutivos SIN reenumerar:
+
+MOD-005   (existe)
+MOD-005A  (nuevo intermedio) ← Letra mayúscula
+MOD-006   (existe)
+
+Uso: Inserción rápida sin reenumerar toda la secuencia.
+
+
+2.5 ¿Cuánto Código por Módulo?
+
+INSTRUCCIÓN: Mantén cada módulo ≤75 líneas
+
+Límites:
+• Mínimo: 1 línea (si es independiente, ej: const API_KEY = 'xxx')
+• Máximo recomendado: 75 líneas
+• Ideal: 10-40 líneas
+
+¿Qué hacer si un módulo crece a 150 líneas?
+→ Divídelo en 2 o más módulos Nivel 1 (MOD-005 y MOD-006)
+→ NO uses multinivel (MOD-005-001, MOD-005-002)
+
+
+2.6 Cohesión Modular: ¿Qué va junto?
+
+INSTRUCCIÓN: Agrupa código que "cambia junto" por la misma razón
+
+PREGÚNTATE:
+1. ¿Estas funciones se modifican por el mismo motivo? → Mismo módulo
+2. ¿Cambiar A obliga a cambiar B? → Mismo módulo
+3. ¿Este bloque tiene sentido completo por sí solo? → Puede ser módulo
+
+ANALOGÍA DEL AUTO:
+Piensa en modularizar como construir un auto con piezas reemplazables.
+
+✅ BUEN MÓDULO: "Sistema de dirección completo"
+   - Volante, columna, rótula, cremallera
+   - Cambias TODO junto cuando falla la dirección
+   - No mezclas con motor o frenos
+
+❌ MAL MÓDULO: "Dirección + Parte del motor"
+   - Al reparar dirección, reescribes motor innecesariamente
+   - Al reparar motor, tocas dirección que funciona bien
+
+✅ MÓDULO ATÓMICO VÁLIDO: "Placa del auto"
+   - Muy pequeño (3-5 líneas de código)
+   - Completamente independiente
+   - Se cambia por razón específica (cambio de dueño)
+
+❌ MÓDULO DEMASIADO ATÓMICO: "Un tornillo de la llanta"
+   - Demasiado granular
+   - Nunca cambiarías solo un tornillo
+   - Cambias toda la llanta o toda la suspensión
+
+
+EJEMPLOS DE CÓDIGO:
+
+✅ BUENA COHESIÓN:
+// MOD-003: Validar email [INICIO]
+function validarEmail(email) {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
+}
+// MOD-003: FIN
+
+// MOD-004: Validar teléfono [INICIO]
+function validarTelefono(tel) {
+  const regex = /^\d{10}$/;
+  return regex.test(tel);
+}
+// MOD-004: FIN
+
+RAZÓN: Email y teléfono se cambian por razones diferentes.
+
+❌ MALA COHESIÓN:
+// MOD-003: Funciones variadas [INICIO]
+function validarEmail(email) { ... }
+function procesarPago(monto) { ... }  ← NO relacionado
+// MOD-003: FIN
+
+RAZÓN: Validar email y procesar pago no tienen relación.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+3. ESTRUCTURA OBLIGATORIA SIMPLIFICADA
+
+INSTRUCCIÓN: Estructura de SOLO 3 partes
+
+
+3.1 Estructura Básica
+
+┌─────────────────────────────────────┐
+│ MOD-001: ENCABEZADO                 │ ← Obligatorio, primero
+├─────────────────────────────────────┤
+│ MOD-002                             │
+│ MOD-003                             │ ← Código funcional
+│ MOD-004                             │   (consecutivo, sin saltos)
+│ ...                                 │
+│ MOD-N-1                             │
+├─────────────────────────────────────┤
+│ MOD-N: NOTAS                        │ ← Obligatorio, último
+└─────────────────────────────────────┘
+
+
+3.2 Encabezado del Archivo
+
+Todo archivo DEBE iniciar con MOD-001: ENCABEZADO
+
 *****************************************
 PROYECTO: [Nombre del Proyecto]
 ARCHIVO: [nombre_archivo.extensión]
 VERSIÓN: [XX.YY]
 FECHA: [DD/MM/AAAA HH:MM (UTC-5)]
 *****************************************
- 
- 
-CRÍTICO: La fecha y hora deben consultarse en https://www.timeanddate.com/worldclock/peru/lima en tiempo real para la zona horaria UTC-5 (Perú). No usar el reloj interno del sistema ni calcular la fecha.
- 
-3.2 Orden de Módulos
- 
-Los módulos deben seguir este orden estricto:
- 
-1. **MOD-001: ENCABEZADO** (obligatorio, siempre primero)
-2. **MOD-002: APERTURA** (obligatorio en HTML, opcional en .GS)
-3. **MOD-003 en adelante: CÓDIGO FUNCIONAL** (tantos como necesites)
-4. **MOD-XXX: CÓDIGO DE CIERRE** (obligatorio, penúltimo)
-5. **MOD-YYY: NOTAS** (obligatorio, último)
- 
-3.3 Módulos Especiales
- 
-MOD-001: ENCABEZADO
- 
-Protege los metadatos del proyecto. Siempre es el primer módulo. Es el MOD-001.
- 
-Para archivos .GS:
- 
+
+INSTRUCCIÓN: Consulta la fecha en tiempo real en:
+https://www.timeanddate.com/worldclock/peru/lima
+
+NO usar el reloj interno del sistema.
+
+
+3.3 MOD-001: ENCABEZADO
+
+INSTRUCCIÓN: Siempre el primer módulo. Protege los metadatos.
+
+Ejemplo JavaScript:
 // MOD-001: ENCABEZADO [INICIO]
 /*
 *****************************************
-PROYECTO: Sistema de Inventario
-ARCHIVO: inventario.gs
+PROYECTO: API REST
+ARCHIVO: api.js
 VERSIÓN: 01.00
-FECHA: 17/01/2026 09:30 (UTC-5)
+FECHA: 10/02/2026 10:30 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
- 
- 
-Para archivos .HTML:
- 
+
+Ejemplo Python:
+# MOD-001: ENCABEZADO [INICIO]
+"""
+*****************************************
+PROYECTO: Procesador
+ARCHIVO: app.py
+VERSIÓN: 01.00
+FECHA: 10/02/2026 10:30 (UTC-5)
+*****************************************
+"""
+# MOD-001: FIN
+
+Ejemplo HTML:
 <!-- MOD-001: ENCABEZADO [INICIO] -->
 <!--
 *****************************************
-PROYECTO: Mi Aplicación Web
+PROYECTO: Web App
 ARCHIVO: index.html
 VERSIÓN: 01.00
-FECHA: 17/01/2026 09:30 (UTC-5)
+FECHA: 10/02/2026 10:30 (UTC-5)
 *****************************************
 -->
 <!-- MOD-001: FIN -->
- 
- 
-MOD-002: APERTURA
- 
-Cuándo usarlo:
- 
-Este módulo solo debe crearse si hay código estructural (no funcional) al inicio del archivo que necesita protección.
- 
-Obligatorio en HTML:
-Siempre debe existir porque contiene la estructura base del documento.
- 
-Opcional en .GS:
-Solo si hay configuración global o código de preparación. Si el archivo empieza directamente con funciones, MOD-002 será tu primera función.
- 
-Contenido en HTML:
- 
-<!-- MOD-002: APERTURA HTML [INICIO] -->
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi Aplicación</title>
-  <?!= include('style'); ?>
-</head>
-<body>
-<div class="container">
-<!-- MOD-002: FIN -->
- 
- 
-Contenido en .GS (solo si necesario):
- 
-// MOD-002: CONFIGURACIÓN GLOBAL [INICIO]
-const CONFIG = {
-  spreadsheetId: '1ABC...',
-  hoja: 'Datos',
-  columna: 0
-};
-// MOD-002: FIN
- 
- 
-MOD-XXX: CÓDIGO DE CIERRE
- 
-Penúltimo módulo del archivo. Contiene código que se ejecuta al final o cierra estructuras abiertas en MOD-002.
- 
-Para HTML:
-Debe cerrar todo lo que se abrió en MOD-002.
- 
- 
-<!-- MOD-010: CÓDIGO DE CIERRE [INICIO] -->
-</div>
-<?!= include('scripts'); ?>
-</body>
-</html>
-<!-- MOD-010: FIN -->
- 
- 
-Para .GS:
- 
-// MOD-008: CÓDIGO DE CIERRE [INICIO]
-Logger.log('Sistema cargado v01.00');
-// Validaciones finales, inicialización
-// MOD-008: FIN
- 
- 
-Si no hay código de cierre, el módulo puede estar vacío:
- 
-// MOD-006: CÓDIGO DE CIERRE [INICIO]
-// No hay código de cierre en este archivo
-// MOD-006: FIN
- 
- 
-MOD-YYY: NOTAS
- 
-Último módulo del archivo. Contiene documentación breve y puntual.
- 
-Propósito:
-•  	Centralizar comentarios técnicos
-•  	Mantener limpio el resto del código
-•  	Documentar dependencias y advertencias críticas
- 
-IMPORTANTE: Debe ser breve, solo información crítica y necesaria. No extenderse en documentación técnica exhaustiva.
- 
-Estructura sugerida:
- 
-// MOD-009: NOTAS [INICIO]
-/*
-DESCRIPCIÓN:
-Breve descripción del archivo y su propósito.
- 
-DEPENDENCIAS:
-- MOD-003: Requiere configuración de X
-- MOD-005: Usa función Y de módulo Z
- 
-ADVERTENCIAS:
-- MOD-004: No maneja valores nulos
-- MOD-007: Requiere permisos de Drive
- 
-[Cualquier otra información crítica necesaria]
-*/
-// MOD-009: FIN
- 
- 
-3.4 Reglas para Módulos de Apertura y Cierre
- 
-1. MOD-002: APERTURA es obligatorio en archivos HTML (estructura del documento)
-2. MOD-002: APERTURA es opcional en archivos .GS (solo si hay código de preparación)
-3. Si creas MOD-002: APERTURA, debes crear MOD-XXX: CIERRE correspondiente
-4. No crear módulos vacíos solo para "cumplir la estructura"
-5. Lo que se abre en APERTURA debe cerrarse en CIERRE
-6. No modularizar tags intermedios sin contenido
- 
- 
- 
-4. SINTAXIS POR LENGUAJE
- 
-4.1 Archivos .GS (JavaScript / Google Apps Script)
- 
-Usar exclusivamente sintaxis JavaScript para todos los comentarios.
- 
-Delimitadores de módulos:
- 
-// MOD-003: DESCRIPCIÓN [INICIO]
- 
- 
-Comentarios internos:
- 
-// Comentario de una línea
- 
-/*
- * Comentario de
- * múltiples líneas
- */
- 
- 
-Ejemplo completo:
- 
-// MOD-003: VALIDAR DATOS [INICIO]
-function validarDatos(datos) {
-  // Verificar que datos no sea nulo
-  if (!datos) {
-	throw new Error("Datos vacíos");
-  }
- 
-  /* Validar estructura de datos:
-   * - Debe ser un objeto
-   * - Debe tener propiedades requeridas
-   */
-  return typeof datos === 'object';
-}
-// MOD-003: FIN
- 
- 
-4.2 Archivos .HTML
- 
-Cada lenguaje dentro del HTML usa sus propios comentarios.
- 
-Delimitadores de módulos:
-En HTML: <!-- -->
-Dentro de <script>: //
-Dentro de <style>: /* */
- 
 
-Comentarios internos extra que no son delimidaroes: 
-•  	HTML puro: <!-- -->
-•  	Dentro de <script> (JavaScript): // y /* */ ; pero no usar /* */ con delimitadores.
-•  	Dentro de <style> (CSS): Solo usar /* */ 
- 
-Ejemplo de estructura correcta:
- 
-<!-- MOD-003: CONTENIDO [INICIO] -->
-<div class="container">
-  <!-- Comentario HTML -->
-  <h1>Título</h1>
-</div>
-<!-- MOD-003: FIN -->
- 
-<!-- MOD-004: JAVASCRIPT [INICIO] -->
-<script>
-// Comentario JavaScript correcto
-function iniciar() {
-  /** Comentario multilínea
-   * JavaScript correcto */
-  console.log('Iniciado');
-}
-</script>
-<!-- MOD-004: FIN -->
- 
-<!-- MOD-005: ESTILOS [INICIO] -->
-<style>
-/* Comentario CSS correcto */
-.container {
-  max-width: 1200px;
-}
-</style>
-<!-- MOD-005: FIN -->
- 
- 
-4.3 ERROR CRÍTICO: Comentarios HTML dentro de <script> y <style>
- 
-NUNCA usar <!-- --> dentro de etiquetas <script> o <style>.
-NUNCA usar // dentro de <style>
- 
-Este error causa:
-•  	Funciones no definidas
-•  	Variables globales inexistentes
-•  	Event listeners rotos
-•  	Errores silenciosos sin mensaje en consola
- 
-INCORRECTO:
- 
-<script>
-<!-- Comentario incorrecto -->
-function iniciar() {
-  <!-- Variable incorrecta -->
-  let x = 5;
-}
-</script>
- 
- 
-CORRECTO:
- 
-<script>
-// Comentario correcto
-function iniciar() {
-  // Variable correcta
-  let x = 5;
-}
-</script>
- 
- 
-4.4 Encapsulado de <script> y <style>
- 
-Los bloques <script> y <style> deben estar completamente dentro de un módulo, desde la etiqueta de apertura hasta el cierre.
- 
-Estructura correcta:
- 
-<!-- MOD-004: JAVASCRIPT [INICIO] -->
-<script>
-// Todo el código JavaScript aquí
-function ejemplo() {
-  return true;
-}
-</script>
-<!-- MOD-004: FIN -->
- 
-<!-- MOD-005: ESTILOS [INICIO] -->
-<style>
-/* Todo el código CSS aquí */
-.clase {
-  color: blue;
-}
-</style>
-<!-- MOD-005: FIN -->
- 
- 
- 
- 
-5. EJEMPLOS COMPLETOS
- 
-5.1 Archivo .GS Completo
- 
- 
+
+3.4 MOD-002+: CÓDIGO FUNCIONAL
+
+INSTRUCCIÓN: Después de MOD-001, continúa con MOD-002, MOD-003, MOD-004...
+
+Numeración consecutiva SIN SALTOS.
+
+Ejemplo JavaScript:
 // MOD-001: ENCABEZADO [INICIO]
-/*
-*****************************************
-PROYECTO: Sistema de Inventario
-ARCHIVO: inventario.gs
-VERSIÓN: 01.00
-FECHA: 17/01/2026 09:30 (UTC-5)
-*****************************************
-*/
+...
 // MOD-001: FIN
- 
-// MOD-002: CONFIGURACIÓN [INICIO]
-const CONFIG = {
-  hoja: "Inventario",
-  colProducto: 0,
-  colStock: 1
-};
+
+// MOD-002: Configuración [INICIO]
+const CONFIG = { apiUrl: 'https://api.com' };
 // MOD-002: FIN
- 
-// MOD-003: OBTENER HOJA [INICIO]
-function obtenerHoja() {
-  return SpreadsheetApp.getActiveSpreadsheet()
-	.getSheetByName(CONFIG.hoja);
-}
+
+// MOD-003: Validar datos [INICIO]
+function validar(datos) { ... }
 // MOD-003: FIN
- 
-// MOD-004: BUSCAR PRODUCTO [INICIO]
-function buscarProducto(codigo) {
-  const hoja = obtenerHoja();
-  const datos = hoja.getDataRange().getValues();
- 
-  for (let i = 1; i < datos.length; i++) {
-	if (datos[i][CONFIG.colProducto] === codigo) {
-  	return {
-    	fila: i + 1,
-    	stock: datos[i][CONFIG.colStock]
-  	};
-	}
-  }
-  return null;
-}
+
+// MOD-004: Procesar datos [INICIO]
+function procesar(datos) { ... }
 // MOD-004: FIN
- 
-// MOD-005: CÓDIGO DE CIERRE [INICIO]
-Logger.log('Sistema de inventario cargado v01.00');
+
+// MOD-005: NOTAS [INICIO]
+/* Descripción del archivo */
 // MOD-005: FIN
- 
-// MOD-006: NOTAS [INICIO]
-/*
-DESCRIPCIÓN:
-Sistema básico de inventario con búsqueda de productos.
- 
-DEPENDENCIAS:
-- MOD-003: Requiere hoja "Inventario" en el Spreadsheet
-- MOD-004: Usa configuración de MOD-002
- 
-ADVERTENCIAS:
-- MOD-004: Devuelve null si no encuentra el producto
-*/
-// MOD-006: FIN
- 
- 
-5.2 Archivo .HTML Completo
- 
- 
+
+Ejemplo Python (sin configuración inicial):
+# MOD-001: ENCABEZADO [INICIO]
+...
+# MOD-001: FIN
+
+# MOD-002: Leer archivo [INICIO]
+def leer(path): ...
+# MOD-002: FIN
+
+# MOD-003: Procesar contenido [INICIO]
+def procesar(contenido): ...
+# MOD-003: FIN
+
+# MOD-004: NOTAS [INICIO]
+"""Descripción del archivo"""
+# MOD-004: FIN
+
+Ejemplo HTML:
 <!-- MOD-001: ENCABEZADO [INICIO] -->
-<!--
-*****************************************
-PROYECTO: Mi Aplicación Web
-ARCHIVO: index.html
-VERSIÓN: 01.00
-FECHA: 17/01/2026 09:30 (UTC-5)
-*****************************************
--->
+...
 <!-- MOD-001: FIN -->
- 
-<!-- MOD-002: APERTURA HTML [INICIO] -->
+
+<!-- MOD-002: Apertura HTML [INICIO] -->
 <!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mi Aplicación</title>
-</head>
+<html>
+<head>...</head>
 <body>
-<div class="container">
 <!-- MOD-002: FIN -->
- 
-<!-- MOD-003: CONTENIDO PRINCIPAL [INICIO] -->
-<div class="main">
-  <h1>Bienvenido</h1>
-  <div id="app"></div>
-</div>
+
+<!-- MOD-003: Contenido principal [INICIO] -->
+<div>contenido</div>
 <!-- MOD-003: FIN -->
- 
-<!-- MOD-004: JAVASCRIPT [INICIO] -->
-<script>
-// Función de inicialización
-function iniciar() {
-  document.getElementById('app').innerHTML = 'Aplicación cargada';
-}
- 
-// Ejecutar al cargar
-window.onload = iniciar;
-</script>
-<!-- MOD-004: FIN -->
- 
-<!-- MOD-005: CÓDIGO DE CIERRE [INICIO] -->
-</div>
+
+<!-- MOD-004: Cierre HTML [INICIO] -->
 </body>
 </html>
+<!-- MOD-004: FIN -->
+
+<!-- MOD-005: NOTAS [INICIO] -->
+<!-- Descripción de la página -->
 <!-- MOD-005: FIN -->
- 
-<!-- MOD-006: NOTAS [INICIO] -->
+
+
+3.5 MOD-XXX: NOTAS (Último módulo)
+
+INSTRUCCIÓN: El último módulo es SIEMPRE NOTAS.
+
+Contenido MÁXIMO 20 líneas:
+1. DESCRIPCIÓN (obligatorio, 1-2 líneas)
+2. CRÍTICO (opcional, solo si hay algo importante)
+3. DEPENDENCIAS (opcional, solo si existen)
+
+NO INCLUIR:
+- Historial de cambios
+- Últimas actualizaciones
+- Changelog
+- TODOs extensos
+- Roadmap
+
+Ejemplo JavaScript:
+// MOD-008: NOTAS [INICIO]
+/*
+DESCRIPCIÓN:
+Sistema de validación de datos con procesamiento básico.
+*/
+// MOD-008: FIN
+
+Ejemplo con dependencias:
+// MOD-010: NOTAS [INICIO]
+/*
+DESCRIPCIÓN:
+API REST con validación y procesamiento de datos.
+
+DEPENDENCIAS:
+- MOD-003: Valida entrada antes de MOD-004
+- MOD-005: Requiere CONFIG de MOD-002
+*/
+// MOD-010: FIN
+
+Ejemplo con advertencia crítica:
+// MOD-012: NOTAS [INICIO]
+/*
+DESCRIPCIÓN:
+Procesador de archivos con validación de permisos.
+
+CRÍTICO:
+- MOD-004 NO maneja valores nulos, validar antes
+- MOD-007 requiere permisos de Drive autorizados
+
+DEPENDENCIAS:
+- MOD-003 valida antes de MOD-004
+- MOD-006 usa CONFIG de MOD-002
+*/
+// MOD-012: FIN
+
+Ejemplo HTML con multinivel:
+<!-- MOD-015: NOTAS [INICIO] -->
 <!--
 DESCRIPCIÓN:
-Página principal de la aplicación web.
- 
-DEPENDENCIAS:
-- MOD-004: JavaScript de inicialización
- 
-ADVERTENCIAS:
-- El contenido dinámico se carga en div#app
+Interfaz de gestión de proyectos.
+
+MULTINIVEL OBLIGATORIO:
+- MOD-004-001 a 004-017: Dentro de <script> usa //
+- MOD-005-001 a 005-003: Dentro de <style> usa /* */
 -->
-<!-- MOD-006: FIN -->
- 
- 
-5.3 Ejemplo con Submódulos
- 
- 
+<!-- MOD-015: FIN -->
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+4. SÍMBOLOS DE COMENTARIO POR LENGUAJE
+
+4.1 Tabla de Símbolos
+
+INSTRUCCIÓN: Usa el símbolo correspondiente a tu lenguaje.
+
+SÍMBOLOS POR LENGUAJE:
+
+// → JavaScript, TypeScript, Java, C, C++, C#, Go, Rust, Swift, Kotlin, PHP
+#  → Python, Ruby, Bash, Shell, PowerShell, Perl, R, PHP (alternativo)
+-- → SQL, Lua
+<!-- --> → HTML, XML, SVG
+/* */ → CSS (única opción, en UNA línea)
+% → MATLAB, LaTeX
+
+
+4.2 Regla de UNA Línea
+
+INSTRUCCIÓN CRÍTICA: Los delimitadores DEBEN estar en UNA sola línea.
+
+✅ CORRECTO:
+// MOD-005: Función [INICIO]
+# MOD-005: Función [INICIO]
+<!-- MOD-005: Función [INICIO] -->
+/* MOD-005: Función [INICIO] */
+
+❌ INCORRECTO (delimitador en múltiples líneas):
+"""
+MOD-005: Función [INICIO]
+"""
+
+<!--
+MOD-005: Función [INICIO]
+-->
+
+/*
+MOD-005: Función [INICIO]
+*/
+
+RAZÓN: El parser detecta delimitadores línea por línea.
+
+
+4.3 Preferir Símbolo Breve
+
+INSTRUCCIÓN: Cuando un lenguaje tiene múltiples opciones, usa el más breve.
+
+• Python: Usa # (NO """ """)
+• JavaScript: Usa // (NO /* */)
+• SQL: Usa -- (NO /* */)
+• PHP: Usa // o # (NO /* */)
+
+
+4.4 Consistencia de Símbolos
+
+INSTRUCCIÓN: Usa el MISMO símbolo en [INICIO] y FIN.
+
+✅ CORRECTO:
+// MOD-005: Función [INICIO]
+...
+// MOD-005: FIN
+
+❌ INCORRECTO (símbolos diferentes):
+// MOD-005: Función [INICIO]
+...
+/* MOD-005: FIN */
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PARTE 2: CASOS ESPECIALES
+═══════════════════════════════════════════════════════════════════════════════
+
+5. MULTINIVEL (Solo cuando es obligatorio)
+
+INSTRUCCIÓN PRINCIPAL: NO uses multinivel SALVO que sea técnicamente obligatorio.
+
+
+5.1 ¿Qué es Multinivel?
+
+Multinivel significa crear jerarquías de módulos:
+
+Nivel 1: MOD-005
+Nivel 2: MOD-005-003
+Nivel 3: MOD-005-003-001
+Nivel N: MOD-005-003-001-004-002... (sin límite técnico)
+
+
+5.2 ¿Cuándo es OBLIGATORIO?
+
+INSTRUCCIÓN: Usa multinivel SOLO cuando el símbolo de comentario DEBE cambiar.
+
+CASO 1: HTML con <script>
+
+Problema: No puedes usar <!-- --> dentro de <script> (rompe JavaScript)
+Solución: Usa multinivel
+
+<!-- MOD-004: JAVASCRIPT [INICIO] -->
+<script>
+// MOD-004-001: Init [INICIO]
+function init() { ... }
+// MOD-004-001: FIN
+</script>
+<!-- MOD-004: FIN -->
+
+Nivel 1 (MOD-004): HTML usa <!-- -->
+Nivel 2 (MOD-004-001): Dentro de <script> usa //
+
+
+CASO 2: HTML con <style>
+
+Problema: No puedes usar <!-- --> dentro de <style> (no es válido en CSS)
+Solución: Usa multinivel
+
+<!-- MOD-005: ESTILOS [INICIO] -->
+<style>
+/* MOD-005-001: Variables [INICIO] */
+:root { --color: blue; }
+/* MOD-005-001: FIN */
+</style>
+<!-- MOD-005: FIN -->
+
+Nivel 1 (MOD-005): HTML usa <!-- -->
+Nivel 2 (MOD-005-001): Dentro de <style> usa /* */
+
+
+CASO 3 (Rarísimo): String con HTML embebido en JavaScript
+
+<!-- MOD-004: JAVASCRIPT [INICIO] -->
+<script>
+// MOD-004-001: Generador [INICIO]
+function generarHTML() {
+  return `
+    <!-- MOD-004-001-001: Template [INICIO] -->
+    <div>Contenido</div>
+    <!-- MOD-004-001-001: FIN -->
+  `;
+}
+// MOD-004-001: FIN
+</script>
+<!-- MOD-004: FIN -->
+
+Este caso es extremadamente raro.
+
+
+5.3 ¿Cuándo NO Usar Multinivel?
+
+INSTRUCCIÓN: NO uses multinivel en estos casos:
+
+❌ Organización jerárquica conceptual
+   Incorrecto: MOD-005-001, MOD-005-002 para "agrupar funciones relacionadas"
+   Correcto: MOD-005, MOD-006 (módulos Nivel 1 separados)
+
+❌ Módulo muy largo (>75 líneas)
+   Incorrecto: Dividir en submódulos MOD-005-001, MOD-005-002
+   Correcto: Dividir en módulos Nivel 1: MOD-005, MOD-006
+
+❌ Crear "carpetas" lógicas de código
+   Incorrecto: MOD-003 "Validaciones" con hijos 003-001, 003-002
+   Correcto: MOD-003 "Validar email", MOD-004 "Validar teléfono"
+
+
+5.4 Reglas de Cascada (Cuando uses multinivel)
+
+RENUMERACIÓN EN CASCADA:
+Si MOD-005 → MOD-007, entonces:
+• MOD-005-003 → MOD-007-003
+• MOD-005-003-001 → MOD-007-003-001
+
+ELIMINACIÓN EN CASCADA:
+Si eliminas MOD-005, se eliminan también:
+• MOD-005-003
+• MOD-005-003-001
+• Todos sus descendientes
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+6. EJEMPLOS COMPLETOS
+
+6.1 JavaScript (Nivel 1 únicamente)
+
 // MOD-001: ENCABEZADO [INICIO]
 /*
 *****************************************
-PROYECTO: Gestor de Ventas
-ARCHIVO: ventas.gs
+PROYECTO: API REST
+ARCHIVO: api.js
 VERSIÓN: 01.00
-FECHA: 17/01/2026 09:30 (UTC-5)
+FECHA: 10/02/2026 10:30 (UTC-5)
 *****************************************
 */
 // MOD-001: FIN
- 
-// MOD-002: CONFIGURACIÓN [INICIO]
-const CONFIG = {
-  hoja: "Ventas",
-  colFecha: 0,
-  colTotal: 1
-};
-// MOD-002: FIN
- 
-// MOD-003: PROCESAMIENTO DE VENTAS [INICIO]
-// MOD-003-S01: INICIAL [INICIO]
-function procesarVentas(ventas) {
-  const validadas = validarVentas(ventas);
-  const calculadas = calcularTotales(validadas);
-  return guardarVentas(calculadas);
-}
-// MOD-003-S01: FIN
- 
-// MOD-003-S02: VALIDAR VENTAS [INICIO]
-function validarVentas(ventas) {
-  return ventas.filter(v => v.total > 0);
-}
-// MOD-003-S02: FIN
- 
-// MOD-003-S03: CALCULAR TOTALES [INICIO]
-function calcularTotales(ventas) {
-  return ventas.map(v => ({
-	...v,
-	impuesto: v.total * 0.18
-  }));
-}
-// MOD-003-S03: FIN
-// MOD-003: FIN 
 
-// MOD-004: CÓDIGO DE CIERRE [INICIO]
-Logger.log('Sistema de ventas cargado');
+// MOD-002: CONFIGURACIÓN [INICIO]
+const CONFIG = { port: 3000, timeout: 5000 };
+// MOD-002: FIN
+
+// MOD-003: VALIDAR [INICIO]
+function validar(datos) {
+  return datos && datos.id;
+}
+// MOD-003: FIN
+
+// MOD-004: PROCESAR [INICIO]
+async function procesar(req) {
+  if (!validar(req.body)) throw new Error('Inválido');
+  return { success: true, data: req.body };
+}
 // MOD-004: FIN
- 
+
 // MOD-005: NOTAS [INICIO]
 /*
 DESCRIPCIÓN:
-Procesamiento de ventas con validación y cálculo de impuestos.
- 
-DEPENDENCIAS:
-- MOD-003-S01: Parte inicial
-- MOD-003-S02: Función de validación
-- MOD-003-S03: Función de cálculo
+API REST con validación de datos.
 
+DEPENDENCIAS:
+- MOD-003 valida antes de MOD-004
 */
 // MOD-005: FIN
- 
- 
- 
- 
 
- 
-PARTE 2: REGLAS E INSTRUCCIONES
- 
-6. REGLAS DE EJECUCIÓN
- 
-REGLAS CRÍTICAS (prioridad máxima)
- 
-REGLA 1: TODO el código debe estar dentro de módulos MOD-XXX. Si una línea de código no está dentro de un módulo, está en riesgo de perderse.
- 
-REGLA 2: MOD-001: ENCABEZADO debe ser la primera línea del archivo. Nunca dejar código antes de MOD-001, ni siquiera DOCTYPE en HTML.
- 
-REGLA 3: Cada módulo debe tener [INICIO] con corchetes en el delimitador de apertura al final de la linea. Es obligatorio y literal.
- 
-REGLA 4: Cada delimitador FIN debe usar exactamente el mismo ID que su correspondiente INICIO.
- 
-REGLA 5: La numeración de módulos debe ser secuencial sin saltos: 001, 002, 003, 004. No usar 001, 005, 003.
- 
-REGLA 6: La fecha y hora del encabezado deben consultarse en Internet en tiempo real en https://www.timeanddate.com/worldclock/peru/lima para UTC-5 (Perú). No usar el reloj interno del sistema ni calcular la fecha. Formato: DD/MM/AAAA HH:MM (UTC-5).
- 
-REGLA 7: Al modificar código que ya tiene módulos, entregar SOLO el módulo modificado, no el archivo completo.
- 
-REGLAS DE ESTRUCTURA
- 
-REGLA 8: Los módulos deben seguir este orden estricto:
-1. MOD-001: ENCABEZADO (obligatorio)
-2. MOD-002: APERTURA (obligatorio en HTML, opcional en .GS)
-3. MOD-003+: CÓDIGO FUNCIONAL (tantos como necesites)
-4. MOD-XXX: CÓDIGO DE CIERRE (Si fuese necesario, penúltimo)
-5. MOD-YYY: NOTAS (obligatorio, último)
- 
-REGLA 9: MOD-001: ENCABEZADO debe contener exactamente estos campos:
-•  	PROYECTO
-•  	ARCHIVO (con extensión .gs o .html)
-•  	VERSIÓN (formato XX.YY)
-•  	FECHA (formato DD/MM/AAAA HH:MM (UTC-5))
- 
-REGLA 10: MOD-002: APERTURA es obligatorio en archivos HTML. Debe contener: DOCTYPE, html, head, body y estructura base del documento.
- 
-REGLA 11: MOD-002: APERTURA es opcional en archivos .GS. Solo crearlo si hay configuración global o código de preparación. Si el archivo empieza con funciones, MOD-002 será la primera función.
- 
-REGLA 12: Si se crea MOD-002: APERTURA, debe existir un MOD-XXX: CÓDIGO DE CIERRE correspondiente que cierre todo lo que se abrió.
- 
-REGLA 13: MOD-YYY: NOTAS debe ser el último módulo del archivo. Debe ser breve y contener solo información crítica.
- 
-REGLA 14: No crear módulos vacíos o que solo contengan tags de apertura/cierre sin contenido funcional.
- 
-REGLAS DE SINTAXIS
- 
-REGLA 15: En archivos .GS, usar exclusivamente sintaxis JavaScript:
-•  	Delimitadores: // MOD-XXX:
-•  	Comentarios extra: // y /* */ (Nunca usar /* */ con delimitadores)
- 
-REGLA 16: En archivos .HTML, usar sintaxis HTML para delimitadores:
-•  	Delimitadores: (La línea de texto que determina el inicio de un MOD y la que determina su fin)
-En código HTML: <!-- MOD-XXX: →
-Dentro de <script>: //
-Dentro de <style>: /* */
-•  	Comentarios extra en el código HTML: <!-- -->
-•  	Comentarios extra dentro de <script>: // y /* / (No usar /* */ para delimitadores)
-•  	Comentarios dentro de <style>:  Solo /* */
- 
-REGLA 17: NUNCA usar <!-- --> dentro de etiquetas <script> o <style>. Nunca usar // dentro de <style>. Este error causa funciones no definidas y variables inexistentes.
- 
-REGLA 18: Los bloques <script> y <style> deben estar completamente encapsulados dentro de un módulo, desde la etiqueta de apertura hasta el cierre.
- 
-REGLA 19: El formato de IDs de módulos principales es MOD-XXX donde XXX son tres dígitos: 001, 002, 003.
- 
-REGLA 20: El formato de IDs de submódulos es MOD-XXX-SYY donde XXX es el módulo padre e YY es el número de submódulo: MOD-004-S01, MOD-004-S02.
- 
-REGLA 21: Los submódulos deben numerarse secuencialmente: S01, S02, S03. No usar S1, S2 sin el cero inicial.
- 
-REGLAS DE ERRORES COMUNES
- 
-REGLA 22: No dejar código fuera de módulos. Todo comentario y código vivo debe estar dentro de un MOD-XXX.
- 
-REGLA 23: No usar MOD-XXX en comentarios internos del código. Los identificadores MOD-XXX solo deben usarse en delimitadores de módulos.
- 
-REGLA 24: No omitir [INICIO] en el delimitador de apertura. No omitir FIN en el delimitador de cierre.
- 
-REGLA 25: No mezclar tipos de comentarios incorrectamente. Respetar la sintaxis de cada lenguaje según REGLAS 15-18.
- 
-REGLA 26: No crear módulos con apertura y cierre separados cuando no hay contenido entre ellos. Ejemplo incorrecto:
- 
-<!-- MOD-003: APERTURA CONTAINER [INICIO] -->
-<div class="container">
+
+6.2 Python (Nivel 1 únicamente)
+
+# MOD-001: ENCABEZADO [INICIO]
+"""
+*****************************************
+PROYECTO: Procesador
+ARCHIVO: app.py
+VERSIÓN: 01.00
+FECHA: 10/02/2026 10:30 (UTC-5)
+*****************************************
+"""
+# MOD-001: FIN
+
+# MOD-002: CONFIGURACIÓN [INICIO]
+CONFIG = {'carpeta': '/datos', 'ext': '.txt'}
+# MOD-002: FIN
+
+# MOD-003: LEER [INICIO]
+def leer(ruta):
+    with open(ruta, 'r') as f:
+        return f.read()
+# MOD-003: FIN
+
+# MOD-004: PROCESAR [INICIO]
+def procesar(contenido):
+    return [linea.strip() for linea in contenido.split('\n')]
+# MOD-004: FIN
+
+# MOD-005: NOTAS [INICIO]
+"""
+DESCRIPCIÓN:
+Procesador básico de archivos de texto.
+
+DEPENDENCIAS:
+- MOD-003 lee archivos
+- MOD-004 procesa contenido
+"""
+# MOD-005: FIN
+
+
+6.3 HTML con Multinivel Obligatorio
+
+<!-- MOD-001: ENCABEZADO [INICIO] -->
+<!--
+*****************************************
+PROYECTO: Web App
+ARCHIVO: index.html
+VERSIÓN: 01.00
+FECHA: 10/02/2026 10:30 (UTC-5)
+*****************************************
+-->
+<!-- MOD-001: FIN -->
+
+<!-- MOD-002: APERTURA HTML [INICIO] -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>App</title>
+</head>
+<body>
+<!-- MOD-002: FIN -->
+
+<!-- MOD-003: CONTENIDO [INICIO] -->
+<h1>Bienvenido</h1>
+<div id="app"></div>
 <!-- MOD-003: FIN -->
-<!-- contenido... -->
-<!-- MOD-010: CIERRE CONTAINER [INICIO] -->
-</div>
-<!-- MOD-010: FIN -->
- 
- 
-REGLA 27: No extender el módulo de NOTAS con documentación técnica exhaustiva. Mantenerlo breve y puntual.
- 
- 
-FIN DEL ESTÁNDAR CODEWORKSHOP v5.0
+
+<!-- MOD-004: JAVASCRIPT [INICIO] -->
+<script>
+// MOD-004-001: Init [INICIO]
+function init() {
+  document.getElementById('app').innerHTML = 'Cargado';
+}
+// MOD-004-001: FIN
+
+// MOD-004-002: Events [INICIO]
+window.addEventListener('load', init);
+// MOD-004-002: FIN
+</script>
+<!-- MOD-004: FIN -->
+
+<!-- MOD-005: ESTILOS [INICIO] -->
+<style>
+/* MOD-005-001: Variables [INICIO] */
+:root { --color: blue; }
+/* MOD-005-001: FIN */
+
+/* MOD-005-002: Layout [INICIO] */
+body { margin: 0; }
+/* MOD-005-002: FIN */
+</style>
+<!-- MOD-005: FIN -->
+
+<!-- MOD-006: CIERRE HTML [INICIO] -->
+</body>
+</html>
+<!-- MOD-006: FIN -->
+
+<!-- MOD-007: NOTAS [INICIO] -->
+<!--
+DESCRIPCIÓN:
+Interfaz web básica con JavaScript y CSS.
+
+MULTINIVEL OBLIGATORIO:
+- MOD-004-001/002: Dentro de <script> DEBE usar //
+- MOD-005-001/002: Dentro de <style> DEBE usar /* */
+-->
+<!-- MOD-007: FIN -->
+
+
+6.4 SQL (Nivel 1 únicamente)
+
+-- MOD-001: ENCABEZADO [INICIO]
+/*
+*****************************************
+PROYECTO: DB Inventario
+ARCHIVO: schema.sql
+VERSIÓN: 01.00
+FECHA: 10/02/2026 10:30 (UTC-5)
+*****************************************
+*/
+-- MOD-001: FIN
+
+-- MOD-002: TABLA PRODUCTOS [INICIO]
+CREATE TABLE productos (
+    id INT PRIMARY KEY,
+    nombre VARCHAR(100),
+    stock INT
+);
+-- MOD-002: FIN
+
+-- MOD-003: TABLA CLIENTES [INICIO]
+CREATE TABLE clientes (
+    id INT PRIMARY KEY,
+    nombre VARCHAR(100),
+    email VARCHAR(100) UNIQUE
+);
+-- MOD-003: FIN
+
+-- MOD-004: NOTAS [INICIO]
+/*
+DESCRIPCIÓN:
+Schema básico para sistema de inventario.
+
+TABLAS:
+- productos: Stock de productos
+- clientes: Datos de clientes
+*/
+-- MOD-004: FIN
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PARTE 3: REGLAS EJECUTABLES
+═══════════════════════════════════════════════════════════════════════════════
+
+7. REGLAS DE EJECUCIÓN
+
+Las reglas están organizadas por prioridad y categoría.
+Cada regla es una INSTRUCCIÓN DIRECTA que debes seguir.
+
+
+7.1 REGLAS CRÍTICAS (PRIORIDAD MÁXIMA)
+
+
+REGLA 1: TODO CÓDIGO DENTRO DE MÓDULOS
+
+INSTRUCCIÓN: Cada línea de código DEBE estar dentro de un módulo MOD-XXX.
+
+✅ CORRECTO:
+// MOD-003: Config [INICIO]
+const x = 5;
+// MOD-003: FIN
+
+❌ INCORRECTO:
+const x = 5;  ← Fuera de módulo
+
+
+REGLA 2: MOD-001 SIEMPRE PRIMERO
+
+INSTRUCCIÓN: MOD-001: ENCABEZADO debe ser el primer módulo del archivo.
+
+✅ CORRECTO:
+// MOD-001: ENCABEZADO [INICIO]
+...
+// MOD-001: FIN
+// MOD-002: ...
+
+❌ INCORRECTO:
+const x = 5;  ← Antes de MOD-001
+// MOD-001: ENCABEZADO [INICIO]
+
+
+REGLA 3: DELIMITADORES EN UNA LÍNEA
+
+INSTRUCCIÓN: Los delimitadores [INICIO] y FIN DEBEN estar en UNA línea.
+
+✅ CORRECTO:
+// MOD-005: Función [INICIO]
+
+❌ INCORRECTO:
+"""
+MOD-005: Función [INICIO]
+"""
+
+
+REGLA 4: [INICIO] OBLIGATORIO
+
+INSTRUCCIÓN: El delimitador de apertura DEBE tener [INICIO] con corchetes.
+
+✅ CORRECTO:
+// MOD-005: Función [INICIO]
+
+❌ INCORRECTO:
+// MOD-005: Función
+
+
+REGLA 5: FIN CON MISMO ID
+
+INSTRUCCIÓN: El delimitador FIN DEBE usar el mismo ID que [INICIO].
+
+✅ CORRECTO:
+// MOD-005: Función [INICIO]
+...
+// MOD-005: FIN
+
+❌ INCORRECTO:
+// MOD-005: Función [INICIO]
+...
+// MOD-006: FIN
+
+
+REGLA 6: MISMO SÍMBOLO EN INICIO Y FIN
+
+INSTRUCCIÓN: Usa el MISMO símbolo en [INICIO] y FIN.
+
+✅ CORRECTO:
+// MOD-005: [INICIO]
+...
+// MOD-005: FIN
+
+❌ INCORRECTO:
+// MOD-005: [INICIO]
+...
+/* MOD-005: FIN */
+
+
+REGLA 7: NUMERACIÓN CONSECUTIVA SIN SALTOS
+
+INSTRUCCIÓN: Numera los módulos consecutivamente: 001, 002, 003, 004...
+
+✅ CORRECTO: MOD-001, MOD-002, MOD-003, MOD-004
+❌ INCORRECTO: MOD-001, MOD-003, MOD-005 (saltos)
+
+
+7.2 REGLAS DE ESTRUCTURA
+
+
+REGLA 8: ESTRUCTURA SIMPLIFICADA
+
+INSTRUCCIÓN: Sigue esta estructura SIEMPRE:
+1. MOD-001: ENCABEZADO (obligatorio, primero)
+2. MOD-002, MOD-003, MOD-004... : CÓDIGO FUNCIONAL (consecutivo)
+3. MOD-XXX: NOTAS (obligatorio, último)
+
+
+REGLA 9: HEADER CON CAMPOS OBLIGATORIOS
+
+INSTRUCCIÓN: MOD-001 DEBE contener PROYECTO, ARCHIVO, VERSIÓN, FECHA.
+Fecha en: https://www.timeanddate.com/worldclock/peru/lima
+
+
+REGLA 10: MOD-XXX NOTAS SIEMPRE ÚLTIMO
+
+INSTRUCCIÓN: El último módulo del archivo DEBE ser NOTAS.
+
+✅ CORRECTO:
+// MOD-010: Última función
+// MOD-011: NOTAS
+
+❌ INCORRECTO:
+// MOD-010: NOTAS
+// MOD-011: Última función
+
+
+REGLA 11: NOTAS MÁXIMO 20 LÍNEAS
+
+INSTRUCCIÓN: MOD de NOTAS debe tener máximo 20 líneas.
+
+Contenido permitido:
+• DESCRIPCIÓN (obligatorio, 1-2 líneas)
+• CRÍTICO (opcional)
+• DEPENDENCIAS (opcional)
+
+NO incluir:
+• Historial de cambios
+• Changelog
+• TODOs extensos
+• Roadmap
+
+
+7.3 REGLAS DE MULTINIVEL
+
+
+REGLA 12: PREFERIR NIVEL 1
+
+INSTRUCCIÓN: Usa SOLO Nivel 1 en el 95% de los casos.
+
+
+REGLA 13: MÓDULOS ≤75 LÍNEAS
+
+INSTRUCCIÓN: Si un módulo supera 75 líneas, divídelo en VARIOS módulos Nivel 1.
+
+✅ CORRECTO: Dividir en MOD-005, MOD-006
+❌ INCORRECTO: Usar multinivel MOD-005-001, MOD-005-002
+
+
+REGLA 14: MULTINIVEL SOLO POR CAMBIO DE SÍMBOLO
+
+INSTRUCCIÓN: Usa multinivel SOLO si el símbolo de comentario DEBE cambiar.
+
+Casos obligatorios:
+• Dentro de <script> en HTML
+• Dentro de <style> en HTML
+
+Casos prohibidos:
+❌ Organización jerárquica
+❌ Agrupar funciones
+❌ Módulo muy largo
+
+
+7.4 REGLAS DE SÍMBOLOS
+
+
+REGLA 15: USAR SÍMBOLO DEL LENGUAJE
+
+INSTRUCCIÓN: Usa el símbolo correcto según la Tabla 4.1.
+
+
+REGLA 16: PREFERIR SÍMBOLO BREVE
+
+INSTRUCCIÓN: Si el lenguaje tiene múltiples opciones, usa el más breve.
+• Python: # (NO """ """)
+• JavaScript: // (NO /* */)
+• SQL: -- (NO /* */)
+
+
+REGLA 17: CASOS ESPECIALES HTML
+
+INSTRUCCIÓN: En HTML:
+• Fuera de <script> y <style>: <!-- -->
+• Dentro de <script>: //
+• Dentro de <style>: /* */
+
+NUNCA:
+❌ <!-- --> dentro de <script>
+❌ <!-- --> dentro de <style>
+❌ // dentro de <style>
+
+
+7.5 REGLAS DE ERRORES COMUNES
+
+
+REGLA 18: NO CÓDIGO FUERA DE MÓDULOS
+
+INSTRUCCIÓN: NUNCA dejes código fuera de módulos.
+
+❌ INCORRECTO:
+const x = 5;  ← Fuera
+// MOD-003: [INICIO]
+
+
+REGLA 19: NO MOD-XXX EN COMENTARIOS INTERNOS
+
+INSTRUCCIÓN: NO uses MOD-XXX en comentarios internos.
+
+❌ INCORRECTO:
+// MOD-005: Función [INICIO]
+function ejemplo() {
+  // MOD-006: Aquí  ← NO
+}
+// MOD-005: FIN
+
+
+REGLA 20: NO OMITIR [INICIO] O FIN
+
+INSTRUCCIÓN: NUNCA omitas [INICIO] o FIN.
+
+❌ INCORRECTO:
+// MOD-005: Función  ← Falta [INICIO]
+
+
+REGLA 21: NO """ """ EN DELIMITADORES PYTHON
+
+INSTRUCCIÓN: En Python, usa # para delimitadores (NO """ """).
+
+✅ CORRECTO:
+# MOD-005: [INICIO]
+def ejemplo():
+    """Docstring."""  ← OK interno
+    pass
+# MOD-005: FIN
+
+
+REGLA 22: NO /* */ MULTILÍNEA EN DELIMITADORES
+
+INSTRUCCIÓN: NO uses /* */ en múltiples líneas.
+
+✅ CORRECTO:
+// MOD-005: [INICIO]
+/* MOD-005: [INICIO] */  ← En una línea
+
+❌ INCORRECTO:
+/*
+MOD-005: [INICIO]
+*/
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+FIN DEL ESTÁNDAR CODEWORKSHOP V6
+
+═══════════════════════════════════════════════════════════════════════════════
